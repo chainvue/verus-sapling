@@ -26,6 +26,7 @@
   "files": [
     "dist",
     "crate/pkg",
+    "proto",
     "LICENSE",
     "NOTICE",
     "README.md"
