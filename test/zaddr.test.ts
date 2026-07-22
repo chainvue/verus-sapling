@@ -36,7 +36,12 @@ describe('decodeSaplingAddress', () => {
     expect(() => decodeSaplingAddress('zs1bbb')).toThrow();
   });
 
-  it('is case-insensitive on the input', () => {
+  it('is case-insensitive on all-uppercase input', () => {
     expect(decodeSaplingAddress(VALID.toUpperCase())).toEqual(decodeSaplingAddress(VALID));
+  });
+
+  it('rejects mixed-case input (BIP-173)', () => {
+    const mixed = VALID.slice(0, 20) + VALID.slice(20).toUpperCase();
+    expect(() => decodeSaplingAddress(mixed)).toThrow(/mixed case/);
   });
 });

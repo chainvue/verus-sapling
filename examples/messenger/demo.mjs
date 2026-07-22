@@ -54,7 +54,8 @@ const change = funding.valueSats - FEE;
 console.log(`message: "${text}"\nframed into ${memos.length} chunk(s); change ${(Number(change) / 1e8).toFixed(8)} VRSC`);
 
 const { hex } = await buildShieldedSpend(client, spendProver, {
-  note: { txid: funding.txid, outputIndex: funding.outputIndex, extskHex },
+  note: { txid: funding.txid, outputIndex: funding.outputIndex, extskHex, valueSats: funding.valueSats },
+  feeSats: FEE,
   shieldedOutputs: [
     ...memos.map((memoHex) => ({ address: myAddr, valueSats: 0n, memoHex })), // 0-value message notes
     { address: myAddr, valueSats: change }, // change back to self

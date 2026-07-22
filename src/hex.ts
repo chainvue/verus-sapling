@@ -16,11 +16,13 @@ export function bytesToHex(bytes: Uint8Array): string {
 /** Parse a hex string (even length) to bytes. Throws on odd length / non-hex. */
 export function hexToBytes(hex: string): Uint8Array {
   if (hex.length % 2 !== 0) throw new Error(`hex: odd length ${hex.length}`);
+  // Strict: reject any non-hex char up front. `Number.parseInt` otherwise accepts
+  // "+1"/" 1" and stops at the first bad char in a pair ("1z" -> 1), silently
+  // producing wrong bytes.
+  if (!/^[0-9a-fA-F]*$/.test(hex)) throw new Error('hex: invalid character');
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
-    const byte = Number.parseInt(hex.substr(i * 2, 2), 16);
-    if (Number.isNaN(byte)) throw new Error(`hex: invalid byte at ${i * 2}`);
-    out[i] = byte;
+    out[i] = Number.parseInt(hex.substr(i * 2, 2), 16);
   }
   return out;
 }

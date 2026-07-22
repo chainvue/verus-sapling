@@ -157,12 +157,12 @@ function renderNotes(notes: SpendableNote[]): void {
 }
 
 /** change = note − amount − fee; must be >= 0. */
-function computeChange(): { sendSats: bigint; changeSats: bigint } {
+function computeChange(): { sendSats: bigint; changeSats: bigint; feeSats: bigint } {
   const noteSats = selected!.valueSats;
   const sendSats = parseSats($('amount').value.trim());
   const feeSats = parseSats($('fee').value.trim());
   const changeSats = noteSats - sendSats - feeSats;
-  return { sendSats, changeSats };
+  return { sendSats, changeSats, feeSats };
 }
 
 /** Live preview of the change amount as the user types. */
@@ -187,7 +187,7 @@ async function send(): Promise<void> {
   $('sendBtn').disabled = true;
   try {
     const memo = $('memo').value;
-    const { sendSats, changeSats } = computeChange();
+    const { sendSats, changeSats, feeSats } = computeChange();
     if (changeSats < 0n) throw new Error('amount + fee exceeds the note value');
 
     const shieldedOutputs = [{ address: $('recipient').value.trim(), valueSats: sendSats, memo }];
@@ -202,7 +202,13 @@ async function send(): Promise<void> {
     log(`buildShieldedSpend: spending ${selected.txid.slice(0, 12)}…:${selected.outputIndex}`);
     const t0 = performance.now();
     const { hex } = await buildShieldedSpend(client, prover.spend, {
-      note: { txid: selected.txid, outputIndex: selected.outputIndex, extskHex: $('extsk').value.trim() },
+      note: {
+        txid: selected.txid,
+        outputIndex: selected.outputIndex,
+        extskHex: $('extsk').value.trim(),
+        valueSats: selected.valueSats,
+      },
+      feeSats,
       shieldedOutputs,
     });
     log(`proved in ${((performance.now() - t0) / 1000).toFixed(1)} s; tx ${hex.length / 2} bytes`);

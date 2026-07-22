@@ -24,6 +24,8 @@ import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 
+import { ShieldedInputError } from './errors.js';
+
 const PROTO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'proto');
 
 /** TreeState (from lightwalletd, derived from z_gettreestate). `tree` is the
@@ -80,8 +82,19 @@ export interface LightwalletdTransport {
 export class LightwalletdClient implements LightwalletdTransport {
   private readonly svc: grpc.Client & Record<string, any>;
 
-  /** @param target host:port of lightwalletd (e.g. "localhost:9077" over an SSH tunnel). */
-  constructor(target: string, credentials?: grpc.ChannelCredentials) {
+  /**
+   * @param target host:port of lightwalletd (e.g. "lightwalletd:9067").
+   * @param opts  `credentials` to supply channel credentials explicitly, or
+   *   `insecure: true` for a plaintext channel (dev tunnels only). The default is
+   *   **TLS** (`createSsl()`): an unencrypted channel lets a network observer see
+   *   which notes/txids the wallet fetches and lets a MITM feed fabricated tree
+   *   state. The spending key never crosses this channel, but privacy and
+   *   integrity do.
+   */
+  constructor(
+    target: string,
+    opts?: { credentials?: grpc.ChannelCredentials; insecure?: boolean },
+  ) {
     const def = protoLoader.loadSync('service.proto', {
       keepCase: true,
       longs: String,
@@ -92,7 +105,10 @@ export class LightwalletdClient implements LightwalletdTransport {
     });
     const pkg = grpc.loadPackageDefinition(def) as any;
     const Ctor = pkg.cash.z.wallet.sdk.rpc.CompactTxStreamer;
-    this.svc = new Ctor(target, credentials ?? grpc.credentials.createInsecure());
+    const credentials =
+      opts?.credentials ??
+      (opts?.insecure ? grpc.credentials.createInsecure() : grpc.credentials.createSsl());
+    this.svc = new Ctor(target, credentials);
   }
 
   private unary<T>(method: string, arg: unknown): Promise<T> {
@@ -119,6 +135,11 @@ export class LightwalletdClient implements LightwalletdTransport {
   /** Full raw transaction by txid (display-order hex string). Needed to extract
    *  the full Sapling output (cv/cmu/epk/enc/out/proof) of a note being spent. */
   getTransaction(txidDisplayHex: string): Promise<{ data: Uint8Array; height: string }> {
+    // Validate before Buffer.from, which silently truncates at the first non-hex
+    // char and would query a wrong (shorter) hash.
+    if (!/^[0-9a-fA-F]{64}$/.test(txidDisplayHex)) {
+      throw new ShieldedInputError(`getTransaction: txid must be 64 hex chars, got ${txidDisplayHex.length}`);
+    }
     const hash = Buffer.from(txidDisplayHex, 'hex').reverse(); // internal byte order
     return this.unary('GetTransaction', { hash });
   }

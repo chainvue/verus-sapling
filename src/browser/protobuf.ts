@@ -34,6 +34,11 @@ export class ProtoReader {
       shift += 7;
       if (shift > 49) throw new RangeError('protobuf: varint too long');
     }
+    // Values are server-controlled; above 2^53 float64 rounds silently. Reject
+    // rather than return an imprecise number (guards the money/height crossing).
+    if (result > Number.MAX_SAFE_INTEGER) {
+      throw new RangeError('protobuf: varint exceeds safe integer range');
+    }
     return result;
   }
 

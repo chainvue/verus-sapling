@@ -133,15 +133,29 @@ export async function detectNotes(
 
   return detected
     .filter((n) => !spentNullifiers.has(n.nullifier_hex))
-    .map((n) => ({
-      txid: txidByKey.get(`${n.height}:${n.tx_index}`) ?? '',
-      outputIndex: n.output_index,
-      height: n.height,
-      position: n.position,
-      valueSats: BigInt(n.value),
-      recipientHex: n.recipient_hex,
-      nullifierHex: n.nullifier_hex,
-    }));
+    .map((n) => {
+      const txid = txidByKey.get(`${n.height}:${n.tx_index}`);
+      if (txid === undefined) {
+        throw new ShieldedInputError(
+          `detected note at ${n.height}:${n.tx_index} has no matching block tx (transport/scan mismatch)`,
+        );
+      }
+      // Compact-output values are server-controlled and unauthenticated. Guard the
+      // float64 crossing (JSON number) so an out-of-range value throws instead of
+      // silently rounding — the money invariant, at this inbound boundary.
+      if (!Number.isSafeInteger(n.value)) {
+        throw new ShieldedInputError(`detected note value ${n.value} is not a safe integer`);
+      }
+      return {
+        txid,
+        outputIndex: n.output_index,
+        height: n.height,
+        position: n.position,
+        valueSats: BigInt(n.value),
+        recipientHex: n.recipient_hex,
+        nullifierHex: n.nullifier_hex,
+      };
+    });
 }
 
 /** A shielded (z) recipient of a spend. */
@@ -161,15 +175,28 @@ export interface TransparentRecipient {
   readonly valueSats: bigint;
 }
 
+/** Default sanity ceiling on the fee: 0.1 coin. Overridable via `maxFeeSats`. */
+const DEFAULT_MAX_FEE_SATS = 10_000_000n;
+
 export interface BuildShieldedSpendParams {
-  /** The note to spend, from `detectNotes` (plus its spending key). */
+  /** The note to spend, from `detectNotes` (its value + spending key). */
   readonly note: {
     readonly txid: string;
     readonly outputIndex: number;
     readonly extskHex: string;
+    /** The note's value in satoshis (from the detected `SpendableNote`). Used to
+     *  enforce value conservation before signing. */
+    readonly valueSats: bigint;
   };
   readonly shieldedOutputs?: readonly ShieldedRecipient[];
   readonly transparentOutputs?: readonly TransparentRecipient[];
+  /** The miner fee in satoshis. **Required and explicit**: the fee is the note
+   *  value minus every output, so an unstated fee is silently whatever is left
+   *  over — a forgotten change output would donate it to miners. This value must
+   *  equal `note.valueSats − Σ outputs`, and is bounded by `maxFeeSats`. */
+  readonly feeSats: bigint;
+  /** Sanity ceiling on `feeSats` to catch a mis-computed fee (default 0.1 coin). */
+  readonly maxFeeSats?: bigint;
   /** nExpiryHeight. Defaults to chain tip + 40. */
   readonly expiryHeight?: number;
   /** Consensus branch id. Defaults to Verus `CONSENSUS_BRANCH_ID` (0x76b809bb). */
@@ -183,8 +210,12 @@ export interface BuildShieldedSpendParams {
  * runs `prover` (wasm `spendShielded`, typically in a Web Worker). Returns the
  * broadcastable transaction hex.
  *
- * Value conservation is enforced by the daemon at broadcast: note value must
- * equal Σ shielded-output + Σ transparent-output + fee.
+ * Value conservation is enforced HERE, before signing: `note.valueSats` must
+ * equal Σ shielded-output + Σ transparent-output + `feeSats`. The daemon only
+ * rejects a *negative* fee at broadcast; a positive overshoot (e.g. a forgotten
+ * change output) is a valid, eagerly-mined transaction that donates the excess
+ * to miners. Requiring an explicit `feeSats` and checking the balance turns that
+ * silent loss into a caught error.
  */
 export async function buildShieldedSpend(
   transport: LightwalletdTransport,
@@ -198,6 +229,24 @@ export async function buildShieldedSpend(
   }
   shieldedOutputs.forEach((o, i) => assertSats(`shieldedOutputs[${i}].valueSats`, o.valueSats));
   transparentOutputs.forEach((o, i) => assertSats(`transparentOutputs[${i}].valueSats`, o.valueSats));
+  assertSats('note.valueSats', params.note.valueSats);
+  assertSats('feeSats', params.feeSats);
+
+  // Value conservation + a fee sanity ceiling — see the doc comment above.
+  const maxFee = params.maxFeeSats ?? DEFAULT_MAX_FEE_SATS;
+  if (params.feeSats > maxFee) {
+    throw new ShieldedInputError(
+      `feeSats ${params.feeSats} exceeds maxFeeSats ${maxFee} — pass maxFeeSats to override`,
+    );
+  }
+  const outSum =
+    shieldedOutputs.reduce((a, o) => a + o.valueSats, 0n) +
+    transparentOutputs.reduce((a, o) => a + o.valueSats, 0n);
+  if (params.note.valueSats !== outSum + params.feeSats) {
+    throw new ShieldedInputError(
+      `value conservation failed: note ${params.note.valueSats} != outputs ${outSum} + fee ${params.feeSats}`,
+    );
+  }
 
   const tx = await transport.getTransaction(params.note.txid);
   const height = Number(tx.height);
@@ -232,6 +281,9 @@ export async function buildShieldedSpend(
       value: toSafeNumber(o.valueSats),
       script_hex: o.scriptHex,
     })),
+    // The Rust builder re-checks conservation against the DECRYPTED note value
+    // (authoritative) once the wasm is rebuilt to read this field.
+    fee: toSafeNumber(params.feeSats),
     expiry_height: expiryHeight,
     branch_id: params.branchId ?? CONSENSUS_BRANCH_ID,
   };

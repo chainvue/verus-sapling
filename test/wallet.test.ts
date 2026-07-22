@@ -81,14 +81,28 @@ describe('detectNotes', () => {
     });
     expect(notes).toEqual([]);
   });
+
+  it('throws on a server-supplied note value that is not a safe integer', async () => {
+    const bad: DetectedNoteRaw[] = [{ ...twoNotes[0]!, value: 2 ** 53 + 1 }];
+    await expect(
+      detectNotes(fakeTransport(), () => bad, { key: { extskHex: 'x' }, fromHeight: 100 }),
+    ).rejects.toThrow(/not a safe integer/);
+  });
+
+  it('throws when a detected note has no matching block tx (scan/transport mismatch)', async () => {
+    const orphan: DetectedNoteRaw[] = [{ ...twoNotes[0]!, height: 999, tx_index: 7 }];
+    await expect(
+      detectNotes(fakeTransport(), () => orphan, { key: { extskHex: 'x' }, fromHeight: 100 }),
+    ).rejects.toThrow(/no matching block tx/);
+  });
 });
 
 describe('buildShieldedSpend validation (money invariant at the boundary)', () => {
-  const note = { txid: TXID_INTERNAL, outputIndex: 0, extskHex: 'deadbeef' };
+  const note = { txid: TXID_INTERNAL, outputIndex: 0, extskHex: 'deadbeef', valueSats: 100_000_000n };
 
   it('rejects a spend with no outputs', async () => {
     await expect(
-      buildShieldedSpend(fakeTransport(), async () => '', { note, shieldedOutputs: [] }),
+      buildShieldedSpend(fakeTransport(), async () => '', { note, feeSats: 10_000n, shieldedOutputs: [] }),
     ).rejects.toBeInstanceOf(ShieldedInputError);
   });
 
@@ -96,8 +110,44 @@ describe('buildShieldedSpend validation (money invariant at the boundary)', () =
     await expect(
       buildShieldedSpend(fakeTransport(), async () => '', {
         note,
+        feeSats: 10_000n,
         shieldedOutputs: [{ address: 'zs1abc', valueSats: -1n }],
       }),
     ).rejects.toThrow(/>= 0/);
+  });
+
+  it('rejects a spend that does not conserve value (forgotten change output)', async () => {
+    // note 1.0, sends 0.01, fee 0.0001 → 0.9899 unaccounted → would be burned.
+    await expect(
+      buildShieldedSpend(fakeTransport(), async () => '', {
+        note,
+        feeSats: 10_000n,
+        shieldedOutputs: [{ address: 'zs1abc', valueSats: 1_000_000n }],
+      }),
+    ).rejects.toThrow(/value conservation failed/);
+  });
+
+  it('rejects an implausibly large fee above maxFeeSats', async () => {
+    await expect(
+      buildShieldedSpend(fakeTransport(), async () => '', {
+        note,
+        feeSats: 90_000_000n, // 0.9 coin fee — over the 0.1 default cap
+        shieldedOutputs: [{ address: 'zs1abc', valueSats: 10_000_000n }],
+      }),
+    ).rejects.toThrow(/exceeds maxFeeSats/);
+  });
+
+  it('passes conservation + fee-cap validation (fails later, not on those checks)', async () => {
+    // 0.8 out + 0.2 fee == 1.0 note, and maxFeeSats raised to allow it. The call
+    // still rejects downstream on the empty fake getTransaction — proving that
+    // conservation/fee/negativity validation did NOT reject.
+    await expect(
+      buildShieldedSpend(fakeTransport(), async () => 'ok', {
+        note,
+        feeSats: 20_000_000n,
+        maxFeeSats: 50_000_000n,
+        shieldedOutputs: [{ address: 'zs1abc', valueSats: 80_000_000n }],
+      }),
+    ).rejects.not.toThrow(/conservation|maxFeeSats|>= 0/);
   });
 });

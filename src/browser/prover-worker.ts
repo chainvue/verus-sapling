@@ -16,7 +16,14 @@
  * so they cross the worker boundary only once.
  */
 
-import { detectNotes, initSapling, readNote, spendShielded, type SaplingParams } from '../wasm.js';
+import {
+  detectNotes,
+  initSapling,
+  readNote,
+  spendShielded,
+  verifyCanonicalParams,
+  type SaplingParams,
+} from '../wasm.js';
 
 // Minimal worker-global shape — avoids pulling in the `webworker` lib (which
 // conflicts with `dom`'s `self`) while staying type-safe about what we use.
@@ -42,7 +49,11 @@ async function handle(msg: InMsg): Promise<void> {
   try {
     if (msg.type === 'init') {
       await initSapling(msg.wasmBytes);
-      params = { spend: msg.spendParams, output: msg.outputParams };
+      const loaded = { spend: msg.spendParams, output: msg.outputParams };
+      // Refuse to prove with non-canonical params (the prover skips group-element
+      // checks for speed, so unverified params are attack surface).
+      await verifyCanonicalParams(loaded);
+      params = loaded;
       ctx.postMessage({ type: 'ready' });
       return;
     }

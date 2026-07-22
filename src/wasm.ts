@@ -22,7 +22,38 @@ import initWasm, {
   read_note,
 } from '../crate/pkg/verus_sapling_prover.js';
 
+import { ShieldedError } from './errors.js';
+
 let ready: Promise<void> | undefined;
+
+/** SHA-256 of the canonical Zcash Sapling proving parameters (byte-identical for
+ *  Verus). See NOTICE / README. */
+export const PARAM_SHA256 = {
+  spend: '8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13',
+  output: '2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4',
+} as const;
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes as unknown as BufferSource);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Verify caller-supplied proving parameters are the canonical Sapling params
+ * before they are fed to the prover. The prover reads them WITHOUT group-element
+ * checks (for speed), so an unverified/malicious params file is attack surface;
+ * this hash gate is the cheap defense (one SHA-256 of ~50 MB). Throws on mismatch.
+ * Call once after loading params (the browser Web Worker does this on init).
+ */
+export async function verifyCanonicalParams(params: SaplingParams): Promise<void> {
+  const [spend, output] = await Promise.all([sha256Hex(params.spend), sha256Hex(params.output)]);
+  if (spend !== PARAM_SHA256.spend) {
+    throw new ShieldedError('ERR_SHIELDED_PARAMS', `sapling-spend.params SHA-256 mismatch (got ${spend})`);
+  }
+  if (output !== PARAM_SHA256.output) {
+    throw new ShieldedError('ERR_SHIELDED_PARAMS', `sapling-output.params SHA-256 mismatch (got ${output})`);
+  }
+}
 
 /**
  * Initialize the wasm module. Pass the `.wasm` bytes/URL/Response; in Node,

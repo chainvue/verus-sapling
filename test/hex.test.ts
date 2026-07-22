@@ -16,7 +16,14 @@ describe('hex', () => {
 
   it('hexToBytes rejects odd length and non-hex', () => {
     expect(() => hexToBytes('abc')).toThrow(/odd length/);
-    expect(() => hexToBytes('zz')).toThrow(/invalid byte/);
+    expect(() => hexToBytes('zz')).toThrow(/invalid character/);
+  });
+
+  it('hexToBytes strictly rejects sign/space/partial pairs', () => {
+    // Number.parseInt would accept these and produce wrong bytes.
+    expect(() => hexToBytes('+1')).toThrow(/invalid character/);
+    expect(() => hexToBytes(' 1')).toThrow(/invalid character/);
+    expect(() => hexToBytes('1z')).toThrow(/invalid character/);
   });
 
   it('reverseBytes reverses without mutating the input', () => {

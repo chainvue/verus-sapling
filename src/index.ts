@@ -39,6 +39,8 @@ export {
   spendShielded,
   detectNotes as detectNotesWasm,
   readNote,
+  verifyCanonicalParams,
+  PARAM_SHA256,
   type SaplingParams,
   type DetectedNoteRaw,
   type ReadNoteResult,

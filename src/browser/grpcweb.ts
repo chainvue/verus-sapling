@@ -35,6 +35,11 @@ export interface Frame {
  * any partial remainder for the next chunk (needed for streaming across network
  * chunk boundaries).
  */
+/** Max gRPC-web frame payload (matches gRPC's 4 MiB default). The 4-byte length
+ *  prefix is server-controlled up to 4 GiB; without a cap a malicious proxy could
+ *  drive unbounded buffering (memory DoS). */
+const MAX_FRAME_SIZE = 4 * 1024 * 1024;
+
 export class FrameParser {
   private buf = new Uint8Array(0);
 
@@ -49,6 +54,9 @@ export class FrameParser {
       if (this.buf.length < 5) break;
       const flag = this.buf[0]!;
       const len = new DataView(this.buf.buffer, this.buf.byteOffset, this.buf.byteLength).getUint32(1, false);
+      if (len > MAX_FRAME_SIZE) {
+        throw new RangeError(`gRPC-web: frame length ${len} exceeds max ${MAX_FRAME_SIZE}`);
+      }
       if (this.buf.length < 5 + len) break;
       frames.push({ trailer: (flag & 0x80) !== 0, payload: this.buf.subarray(5, 5 + len) });
       this.buf = this.buf.subarray(5 + len);

@@ -30,6 +30,12 @@ describe('gRPC-web framing', () => {
     expect([...frames[0]!.payload]).toEqual([10, 20, 30, 40, 50]);
   });
 
+  it('rejects a frame whose length prefix exceeds the 4 MiB cap (memory-DoS guard)', () => {
+    const hdr = new Uint8Array(5);
+    new DataView(hdr.buffer).setUint32(1, 5 * 1024 * 1024, false); // 5 MiB > cap
+    expect(() => new FrameParser().push(hdr)).toThrow(/exceeds max/);
+  });
+
   it('yields multiple frames from one buffer and flags the trailer', () => {
     const data = encodeFrame(Uint8Array.from([1]));
     const trailer = new Uint8Array(5 + 3);

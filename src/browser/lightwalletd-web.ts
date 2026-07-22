@@ -101,6 +101,13 @@ export class LightwalletdWebClient implements LightwalletdTransport {
       else if (field === 2 && wire === 2) errorMessage = r.string();
       else r.skip(wire);
     }
+    // The transport retries a broadcast once on a dropped connection (see
+    // grpcweb `post`), which can re-submit a tx that already reached the daemon.
+    // A "transaction already known / in mempool" reply means the FIRST attempt
+    // succeeded — report success rather than a spurious failure.
+    if (errorCode !== 0 && /already[ -](in[ -]?mempool|known|in the mem)|txn-already|in the memory pool/i.test(errorMessage)) {
+      return { errorCode: 0, errorMessage: `already accepted: ${errorMessage}` };
+    }
     return { errorCode, errorMessage };
   }
 

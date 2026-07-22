@@ -40,7 +40,10 @@ function hrpExpand(hrp: string): number[] {
 }
 
 function bech32Decode(addr: string): { hrp: string; data: number[] } {
-  const s = addr.trim().toLowerCase();
+  const raw = addr.trim();
+  // BIP-173: a decoder MUST reject a string that mixes upper- and lower-case.
+  if (/[a-z]/.test(raw) && /[A-Z]/.test(raw)) throw new Error('bech32: mixed case');
+  const s = raw.toLowerCase();
   const sep = s.lastIndexOf('1');
   if (sep < 1) throw new Error('invalid bech32: no separator');
   const hrp = s.slice(0, sep);
@@ -74,7 +77,13 @@ function convertBits(data: number[], from: number, to: number, pad: boolean): nu
       out.push((acc >> bits) & maxv);
     }
   }
-  if (pad && bits > 0) out.push((acc << (to - bits)) & maxv);
+  if (pad) {
+    if (bits > 0) out.push((acc << (to - bits)) & maxv);
+  } else if (bits >= from || ((acc << (to - bits)) & maxv) !== 0) {
+    // BIP-173: reject non-canonical trailing bits (too many leftover, or padding
+    // bits not zero) so a valid-checksum address can't have a malleable encoding.
+    throw new Error('bech32: non-canonical padding');
+  }
   return out;
 }
 

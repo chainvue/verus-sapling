@@ -13,6 +13,12 @@ describe('protobuf varint', () => {
       expect(r.varint()).toBe(n);
     }
   });
+
+  it('throws on a varint beyond the safe-integer range (no silent float rounding)', () => {
+    // 8-byte varint ≈ 2^56, well past 2^53 — server could craft this in a value field.
+    const overflow = Uint8Array.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    expect(() => new ProtoReader(overflow).varint()).toThrow(/safe integer/);
+  });
 });
 
 describe('protobuf message round-trips', () => {
