@@ -16,7 +16,7 @@
 const SERVICE = 'cash.z.wallet.sdk.rpc.CompactTxStreamer';
 
 /** Encode one protobuf message as a gRPC-web data frame. */
-function encodeFrame(msg: Uint8Array): Uint8Array {
+export function encodeFrame(msg: Uint8Array): Uint8Array {
   const frame = new Uint8Array(5 + msg.length);
   frame[0] = 0x00; // data frame, uncompressed
   new DataView(frame.buffer).setUint32(1, msg.length, false); // big-endian length
@@ -25,7 +25,7 @@ function encodeFrame(msg: Uint8Array): Uint8Array {
 }
 
 /** A parsed gRPC-web frame. */
-interface Frame {
+export interface Frame {
   trailer: boolean;
   payload: Uint8Array;
 }
@@ -35,7 +35,7 @@ interface Frame {
  * any partial remainder for the next chunk (needed for streaming across network
  * chunk boundaries).
  */
-class FrameParser {
+export class FrameParser {
   private buf = new Uint8Array(0);
 
   push(chunk: Uint8Array): Frame[] {
