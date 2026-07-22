@@ -34,8 +34,13 @@ via the **workflow_dispatch → dry-run** button on the Release workflow.
 2. **Register the npm trusted publisher** for `@chainvue/verus-sapling`:
    npmjs.com → the package (or your org) → *Settings → Trusted publishers* → add
    the GitHub repo and workflow `release.yml`. Without this, `npm publish` in CI
-   has no authorization. (Alternative: set an `NPM_TOKEN` secret and switch the
+   fails with `ENEEDAUTH`. (Alternative: set an `NPM_TOKEN` secret and switch the
    exec `publishCmd` back to a token-based publish — less secure.)
+
+   Then **activate the Release workflow**: GitHub → repo *Settings → Secrets and
+   variables → Actions → Variables* → add `RELEASE_ENABLED = true`. Until this is
+   set, the `release` job is skipped (so pushes to `main` don't fail on missing
+   npm auth); once set, every push to `main` releases.
 
 3. **Seed the baseline tag** so the first computed release is `0.0.1`, not
    semantic-release's default first version of `1.0.0`:

@@ -41,6 +41,10 @@ permissions: {}
 
 jobs:
   release:
+    # Dormant until the one-time cutover is done (see RELEASING.md): register the
+    # npm trusted publisher, then set repo variable RELEASE_ENABLED=true. Until
+    # then this job is skipped (green) instead of failing every push on ENEEDAUTH.
+    if: ${{ vars.RELEASE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

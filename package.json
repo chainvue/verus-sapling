@@ -6,10 +6,12 @@
   "author": "Robert Lech",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chainvue/verus-sapling.git"
+    "url": "git+https://github.com/chainvue/verus-sapling.git"
   },
   "homepage": "https://github.com/chainvue/verus-sapling#readme",
-  "bugs": "https://github.com/chainvue/verus-sapling/issues",
+  "bugs": {
+    "url": "https://github.com/chainvue/verus-sapling/issues"
+  },
   "keywords": [
     "verus",
     "zcash",
