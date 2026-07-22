@@ -3,7 +3,19 @@
 //! spec are RAW wire order (the TS/orchestration layer reverses
 //! decoderawtransaction display and parses the tree state).
 //!
-//! Verus has Canopy inactive on testnet, so ZIP-212 enforcement is Off.
+//! ZIP-212 enforcement is `Off` on Verus — mainnet AND testnet — and this is
+//! not a testnet-only shortcut. Verified 2026-07-22:
+//!   * Verus consensus is frozen at Sapling. The live mainnet node
+//!     (api.verus.services, block 4_162_386) and the vrsctest daemon both
+//!     report only Overwinter + Sapling active, with `consensus.chaintip` and
+//!     `nextblock` = 76b809bb (Sapling). Blossom is defined but
+//!     `NO_ACTIVATION_HEIGHT` on mainnet (chainparams.cpp).
+//!   * ZIP-212 enforcement begins at Canopy, which is not even present in
+//!     Verus's network-upgrade enum (upgrades.cpp stops at Blossom).
+//! Therefore notes on Verus use the Sapling-era plaintext encoding (random esk,
+//! lead byte 0x01), which `Zip212Enforcement::Off` both builds and accepts.
+//! This holds until/unless Verus ships a Canopy-equivalent upgrade — at which
+//! point `branch_id` would change too, and this constant must be revisited.
 
 use sapling_crypto::circuit::{OutputParameters, SpendParameters};
 use sapling_crypto::note_encryption::Zip212Enforcement;

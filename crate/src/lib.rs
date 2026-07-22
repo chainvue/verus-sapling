@@ -95,8 +95,10 @@ pub fn load_params_from_bytes(
 /// exercise proving — the resulting binding signature is only chain-valid once
 /// `sighash` is the real transaction sighash.
 ///
-/// `zip212` selects the note-plaintext encoding; confirm the correct setting
-/// against `../test/vectors/t2z.json` (Verus Sapling-era vs. Canopy/ZIP-212).
+/// `zip212` selects the note-plaintext encoding. For Verus this is always
+/// `Off`: Verus consensus is frozen at Sapling (branch id 0x76b809bb) on both
+/// mainnet and testnet — Canopy, which gates ZIP-212 enforcement, is not even
+/// defined in Verus's network-upgrade enum. See `json_api.rs` for the evidence.
 pub fn prove_shield(
     outputs: &[ShieldOutput],
     spend_params: &SpendParameters,
