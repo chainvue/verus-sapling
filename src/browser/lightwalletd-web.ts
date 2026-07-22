@@ -110,7 +110,9 @@ export class LightwalletdWebClient implements LightwalletdTransport {
   }
 }
 
-function decodeCompactOutput(msg: Uint8Array): CompactOutput {
+// The decoders below are exported for unit testing (see test/lightwalletd-web.test.ts).
+// They are not part of the public `./browser` barrel.
+export function decodeCompactOutput(msg: Uint8Array): CompactOutput {
   const r = new ProtoReader(msg);
   const out: CompactOutput = { cmu: EMPTY, epk: EMPTY, ciphertext: EMPTY };
   while (!r.done) {
@@ -123,7 +125,7 @@ function decodeCompactOutput(msg: Uint8Array): CompactOutput {
   return out;
 }
 
-function decodeCompactTx(msg: Uint8Array): CompactTx {
+export function decodeCompactTx(msg: Uint8Array): CompactTx {
   const r = new ProtoReader(msg);
   const tx: CompactTx = { index: '0', hash: EMPTY, spends: [], outputs: [] };
   while (!r.done) {
@@ -147,7 +149,7 @@ function decodeCompactTx(msg: Uint8Array): CompactTx {
   return tx;
 }
 
-function decodeCompactBlock(msg: Uint8Array): CompactBlock {
+export function decodeCompactBlock(msg: Uint8Array): CompactBlock {
   const r = new ProtoReader(msg);
   const block: CompactBlock = { height: '0', hash: EMPTY, vtx: [] };
   while (!r.done) {
