@@ -1,0 +1,129 @@
+# Release — automated via semantic-release (Conventional Commits).
+#
+# Zero-touch: every push to `main` runs semantic-release; a releasable change
+# (feat -> minor, fix -> patch; a BREAKING change stays 0.x -> minor per
+# .releaserc.json releaseRules) computes the next version, updates package.json
+# + CHANGELOG.md, publishes to npm, tags, and creates the GitHub release. No
+# releasable commits -> no-op. Preview with the workflow_dispatch dry-run.
+#
+# Publish: semantic-release owns versioning only (@semantic-release/npm runs
+# npmPublish:false, so no NPM token is verified); the actual publish is
+# `npm publish` (exec plugin) using npm OIDC trusted publishing — no NPM_TOKEN,
+# provenance via id-token:write + publishConfig.provenance.
+#
+# ONE-TIME SETUP before the first push to main (see RELEASING.md):
+#   1. Create the GitHub repo + remote and push.
+#   2. Register an npm trusted publisher for @chainvue/verus-sapling
+#      (repo + workflow release.yml). Without it, `npm publish` has no auth.
+#   3. Push baseline tag `v0.0.0` at the initial commit so the first computed
+#      release is 0.0.1, not 1.0.0 (semantic-release's default first version).
+#
+# Security: this job holds id-token:write (npm publish rights). Actions are
+# SHA-pinned (tag-hijack defense); token scope is least-privilege (contents +
+# id-token only; github-plugin comments/labels disabled in .releaserc.json).
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: compute the next version + notes, but do not publish or tag"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # semantic-release pushes the release commit + tag
+      id-token: write # OIDC token for npm trusted publishing (provenance)
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0 # full history + tags: semantic-release needs them
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          cache: npm
+
+      # npm OIDC trusted publishing requires npm >= 11.5.0; Node 24 ships older.
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Release
+        run: >-
+          npx semantic-release
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+
+  smoke:
+    needs: release
+    if: ${{ github.event_name == 'push' || !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve latest published version
+        id: v
+        run: echo "version=$(npm view @chainvue/verus-sapling version)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for registry
+        run: |
+          for i in $(seq 1 30); do
+            if npm view "@chainvue/verus-sapling@${{ steps.v.outputs.version }}" version >/dev/null 2>&1; then
+              echo "available"; exit 0
+            fi
+            echo "waiting ($i)"; sleep 5
+          done
+          echo "version never appeared on registry"; exit 1
+
+      - name: Install from registry into a fresh project (PLAIN NODE consumer probe)
+        run: |
+          mkdir -p /tmp/smoke && cd /tmp/smoke
+          npm init -y >/dev/null
+          npm install "@chainvue/verus-sapling@${{ steps.v.outputs.version }}"
+
+      - name: Import pure exports under plain node (no params needed)
+        run: |
+          cd /tmp/smoke
+          cat > smoke.mjs <<'EOF2'
+          import { parseSats, decodeSaplingAddress, CONSENSUS_BRANCH_ID } from "@chainvue/verus-sapling";
+          if (parseSats("1.5") !== 150000000n) throw new Error("parseSats");
+          if (CONSENSUS_BRANCH_ID !== 0x76b809bb) throw new Error("branch id");
+          const payload = decodeSaplingAddress(
+            "zs1tcvsfvpm8dx5wldd3c5zvvw3r4w663g9cujxvtrw7nhjmrdvll5mc6aju2yhm6e0v7c5uqyf2s4"
+          );
+          if (payload.length !== 43) throw new Error("zaddr payload");
+          console.log("smoke ok");
+          EOF2
+          node smoke.mjs

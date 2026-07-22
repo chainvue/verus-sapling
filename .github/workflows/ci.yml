@@ -1,0 +1,66 @@
+# CI — install, build, typecheck, test on every push and PR.
+#
+# Notes:
+# - This is the PR gate. release.yml runs the same TS gate on push to main
+#   (before publishing); the overlap on main is intentional and cheap.
+# - No lint step: this package has no eslint config (unlike verus-sdk); the
+#   runnable gate is tsc build -> tsc --noEmit -> vitest, plus the Rust crate's
+#   `cargo test` (its own job).
+# - Node matrix: runtime floor is Node 18 (engines), but the test toolchain and
+#   OIDC publishing want newer; 20/22/24 are exercised here.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  crate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      # TODO(security): SHA-pin these two third-party actions before first push,
+      # to match the tag-hijack defense used on checkout/setup-node above.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crate
+
+      # Param-free regression net for the ZIP-243 sighash / v4 serializer.
+      - name: cargo test
+        working-directory: crate
+        run: cargo test
