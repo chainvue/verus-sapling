@@ -95,10 +95,6 @@ builders (`detectNotes` on the main thread; `spendShielded` in a Web Worker for
 the ~20 s prove). All satoshi amounts are `bigint`; memos are `string`, ≤ 512
 bytes. For t→z shielding use the `shieldT2z` wasm builder directly.
 
-> The older `shield()` / `sendShielded()` functions front a `SaplingBackend`
-> abstraction that predates the concrete wasm ABI and currently throw
-> `ShieldedNotImplementedError`; prefer the orchestration above.
-
 ## Roadmap
 
 - **Phase 0 — feasibility spike** *(research done; toolchain/daemon proof

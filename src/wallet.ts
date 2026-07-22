@@ -20,9 +20,18 @@
  * on-chain nullifier byte-for-byte.
  */
 
+import { ShieldedInputError } from './errors.js';
 import { bytesToHex, reverseBytes } from './hex.js';
 import type { LightwalletdTransport } from './lightwalletd.js';
 import { CONSENSUS_BRANCH_ID, toSafeNumber } from './money.js';
+
+/** Enforce the money invariant at the boundary: a `bigint`, and >= 0. */
+function assertSats(label: string, sats: bigint): void {
+  if (typeof sats !== 'bigint') {
+    throw new ShieldedInputError(`${label} must be a bigint (satoshis), got ${typeof sats}`);
+  }
+  if (sats < 0n) throw new ShieldedInputError(`${label} must be >= 0, got ${sats}`);
+}
 import { parseSaplingOutput, parseTreeState, type ParsedTreeState } from './parse.js';
 import type { DetectedNoteRaw } from './wasm.js';
 import { saplingAddressToHex } from './zaddr.js';
@@ -185,8 +194,10 @@ export async function buildShieldedSpend(
   const shieldedOutputs = params.shieldedOutputs ?? [];
   const transparentOutputs = params.transparentOutputs ?? [];
   if (shieldedOutputs.length === 0 && transparentOutputs.length === 0) {
-    throw new Error('buildShieldedSpend: at least one shielded or transparent output is required');
+    throw new ShieldedInputError('at least one shielded or transparent output is required');
   }
+  shieldedOutputs.forEach((o, i) => assertSats(`shieldedOutputs[${i}].valueSats`, o.valueSats));
+  transparentOutputs.forEach((o, i) => assertSats(`transparentOutputs[${i}].valueSats`, o.valueSats));
 
   const tx = await transport.getTransaction(params.note.txid);
   const height = Number(tx.height);
@@ -201,7 +212,7 @@ export async function buildShieldedSpend(
   }
   const myCmuIndex = blockCmus.indexOf(out.cmu);
   if (myCmuIndex < 0) {
-    throw new Error(`buildShieldedSpend: note cmu not found in block ${height} compact outputs`);
+    throw new ShieldedInputError(`note cmu not found in block ${height} compact outputs`);
   }
 
   const expiryHeight = params.expiryHeight ?? (await transport.getLatestHeight()) + 40;

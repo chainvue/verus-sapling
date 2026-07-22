@@ -7,7 +7,7 @@
  * ~50MB total) and a JSON request; the builders return the signed transaction hex.
  *
  * Proving is CPU-heavy (~5s single-threaded per tx) — run it off the main thread
- * (a Web Worker in the browser). This module is the concrete `SaplingBackend`.
+ * (a Web Worker in the browser); see `browser/worker-prover.ts`.
  *
  * STATUS: verified end-to-end — a t->z built through this wasm in Node was
  * accepted by the Verus testnet daemon (txid d142edf8…a0ef).
