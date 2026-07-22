@@ -29,6 +29,11 @@ Verified in the codebase (see `src/wallet.ts`, `src/wasm.ts`, the `crate`):
   one character and its position — never the whole key.
 - **The signed transaction contains no key material** — only proofs, signatures,
   and note ciphertexts.
+- **Value conservation is enforced before signing.** `buildShieldedSpend`
+  requires an explicit `feeSats` and refuses to sign unless
+  `note.valueSats == Σ outputs + feeSats` (with a `maxFeeSats` ceiling). The Rust
+  builder re-checks this against the *decrypted* note value. A forgotten change
+  output can no longer silently donate the remainder to miners.
 
 ## What the library does NOT guarantee
 
@@ -38,8 +43,16 @@ Verified in the codebase (see `src/wallet.ts`, `src/wasm.ts`, the `crate`):
 - **Host / supply-chain / page compromise.** Malicious dependencies, XSS in a
   consuming web page, or a compromised OS can exfiltrate the key. Standard
   hot-signer caveats apply.
-- **Params authenticity is the caller's job** — verify the proving parameters by
-  SHA-256 (see [`NOTICE`](NOTICE)); non-canonical params yield rejected proofs.
+- **Params authenticity** — the browser Worker verifies the proving parameters'
+  SHA-256 (`verifyCanonicalParams`); a Node caller loading params itself should
+  call it too. Non-canonical params are refused.
+- **Network privacy.** Fetching a note's transaction and broadcasting through the
+  same lightwalletd links your notes to your IP — a standard light-client
+  caveat. Use the TLS default (or Tor/a trusted relay) and consider separating
+  the fetch and broadcast paths for stronger unlinkability.
+- **Sender-side recovery of shielded sends.** `t→z` outputs are built with no
+  outgoing viewing key (`ovk = None`), so the *sender* cannot later detect its
+  own shield outputs. Wallet implementers who want that should thread an `ovk`.
 
 ## Guidance for integrators
 
