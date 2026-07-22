@@ -1,0 +1,7 @@
+# Pins the toolchain for reproducible builds of the committed WASM prover
+# (crate/pkg). CI (dtolnay/rust-toolchain) and rustup users honor this; Homebrew
+# cargo ignores it. For a bit-reproducible pkg, pin an exact version here once the
+# committed artifact's build toolchain is confirmed.
+[toolchain]
+channel = "stable"
+targets = ["wasm32-unknown-unknown"]
