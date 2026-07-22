@@ -6,6 +6,13 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "crate/pkg",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -32,7 +39,8 @@
     "build:ext": "tsc && node examples/extension/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "@chainvue/verus-sdk": ">=0.14.0"

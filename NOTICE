@@ -1,0 +1,68 @@
+@chainvue/verus-sapling
+Copyright (c) 2026 Robert Lech
+
+Licensed under the Apache License, Version 2.0.
+
+This package targets the Verus (VRSC) shielded protocol, which is stock Zcash
+Sapling: unmodified circuit, byte-identical MPC parameters, and the stock
+consensus branch id 0x76b809bb. Unlike @chainvue/verus-sdk, this package bundles
+no VerusCoin source — the only Verus-specific value is that branch id.
+
+--------------------------------------------------------------------------------
+Bundled third-party software (statically linked into the published WASM artifact,
+crate/pkg/verus_sapling_prover_bg.wasm)
+--------------------------------------------------------------------------------
+
+The WASM prover is compiled from the Rust crate in crate/ and links the following
+libraries into its object code. Each remains under its own license.
+
+Zcash Sapling protocol implementation — Electric Coin Company:
+  * sapling-crypto        (MIT OR Apache-2.0) — Sapling circuit, Groth16 prover,
+                          RedJubjub signatures, note encryption, bundle builder.
+  * zcash_note_encryption (MIT OR Apache-2.0) — ZIP-212 note encryption.
+  * bellman               (MIT OR Apache-2.0) — Groth16 zk-SNARK proving system.
+                          Copyright (c) Sean Bowe and the bellman contributors.
+
+zkcrypto pairing / elliptic-curve libraries — Sean Bowe and the zkcrypto
+contributors (all MIT OR Apache-2.0):
+  * bls12_381, jubjub, group, ff, pairing, pasta_curves
+
+RedDSA / RedJubjub signature scheme — Henry de Valence and the Zcash Foundation
+(all MIT OR Apache-2.0):
+  * reddsa, redjubjub
+
+Utility libraries:
+  * blake2b_simd  (MIT)            — Copyright (c) Jack O'Connor
+  * subtle        (BSD-3-Clause)   — Copyright (c) Isis Lovecruft, Henry de Valence
+  * rand, rand_core, rand_chacha
+                  (MIT OR Apache-2.0) — The Rand Project Developers
+  * hex           (MIT OR Apache-2.0)
+  * serde_json    (MIT OR Apache-2.0) — Copyright (c) David Tolnay, Erick Tryzelaar
+
+The full text of the Apache License 2.0 is in LICENSE. Copies of the MIT and
+BSD-3-Clause licenses accompany the respective upstream projects; see each
+crate's repository (https://github.com/zcash, https://github.com/zkcrypto,
+https://github.com/ZcashFoundation) for its license text and copyright notices.
+
+--------------------------------------------------------------------------------
+Proving parameters — NOT bundled
+--------------------------------------------------------------------------------
+
+The Sapling proving parameters (sapling-spend.params ~47 MB, sapling-output.params
+~3.5 MB) are the canonical Zcash Sapling MPC parameters and are NOT included in
+this package. Consumers obtain them separately and pass their bytes to the prover.
+Verify integrity by SHA-256:
+
+  sapling-spend.params   8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13
+  sapling-output.params  2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4
+
+These parameters are the output of the Zcash Sapling "Powers of Tau" and
+parameter-generation ceremonies; see https://z.cash for provenance.
+
+--------------------------------------------------------------------------------
+Optional npm dependencies (installed under their own licenses, not bundled)
+--------------------------------------------------------------------------------
+
+  * @grpc/grpc-js, @grpc/proto-loader (Apache-2.0) — used only by the optional
+    Node lightwalletd client (@chainvue/verus-sapling/lightwalletd). The package
+    root and the browser subpath pull in no gRPC runtime.

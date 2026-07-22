@@ -29,8 +29,9 @@ No full node runs on the signing host.
 > **Typed lightwalletd orchestration** (`src/wallet.ts`): `detectNotes()` and
 > `buildShieldedSpend()` source all chain data from a `LightwalletdTransport` and
 > run the prover — proven end to end against a live testnet lightwalletd through
-> the compiled package. Remaining productionization: params distribution, a
-> browser gRPC-web transport, and a Web Worker for the ~20 s spend prove.
+> the compiled package. A **browser gRPC-web transport** (`./browser`) and a
+> **Web Worker prover** ship today; a runnable MV3 extension in
+> `examples/extension/` broadcasts a private z→z from Chrome.
 
 ## Why a separate package
 
@@ -95,23 +96,41 @@ builders (`detectNotes` on the main thread; `spendShielded` in a Web Worker for
 the ~20 s prove). All satoshi amounts are `bigint`; memos are `string`, ≤ 512
 bytes. For t→z shielding use the `shieldT2z` wasm builder directly.
 
-## Roadmap
+## Proving parameters
 
-- **Phase 0 — feasibility spike** *(research done; toolchain/daemon proof
-  pending)*: compile a stock Zcash Sapling prover to WASM; produce one output
-  proof under `node` and in-browser; validate a hand-built `t→z` tx via
-  `decoderawtransaction` / `sendrawtransaction` on a Verus **testnet** daemon.
-  Prereqs not yet in the dev env: `wasm-pack`, `rustup target add
-  wasm32-unknown-unknown`, and a Verus testnet daemon.
-- **Phase 1 — `t→z`** end to end (node-free), with memo.
-- **Phase 2 — `z→z` / `z→t`**: witness/anchor input contract + lightwalletd
-  adapter; optional read-only note-detection helper.
-- **Phase 3 — hardening**: params-distribution strategy, proving perf, key-handling
-  security review, `NOTICE`/`LICENSE` provenance, docs & examples.
+The Sapling prover needs two parameter files — the **canonical Zcash Sapling MPC
+parameters**, byte-identical for Verus. They are **not** bundled (≈50 MB would
+bloat every install); the caller fetches them once and passes their bytes to
+`initSapling` / the prover:
 
-Every phase's bar is **acceptance by a real Verus testnet daemon**, not
-self-consistent TypeScript round-trips.
+| file | size | SHA-256 |
+| --- | --- | --- |
+| `sapling-spend.params` | ~47 MB | `8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13` |
+| `sapling-output.params` | ~3.5 MB | `2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4` |
+
+**Always verify the SHA-256** after fetching. Get them from any Zcash full node
+(`zcutil/fetch-params.sh`), a local Verus install, or your own host — then cache
+them: IndexedDB/Cache API in the browser, the filesystem in Node. The prover is
+parameter-agnostic; supplying non-canonical params yields proofs the daemon
+rejects.
+
+## Status
+
+All three flows (`t→z`, `z→z`, `z→t`) are implemented and **accepted by a Verus
+testnet daemon** — the project's bar throughout is daemon acceptance, not
+self-consistent TypeScript round-trips. The prover compiles to wasm32; note
+detection, lightwalletd orchestration, a browser gRPC-web transport, a Web Worker
+prover, and a runnable extension all ship. The ZIP-243 serializer/sighash is
+regression-tested against daemon-made golden vectors (`crate` `cargo test`), and
+the pure TS surface has a vitest suite.
+
+**Before mainnet / real funds:** review key handling (the full spending key is on
+the signing host — the same trust surface as transparent WIF signing). ZIP-212
+enforcement is `Off`, which is correct for Verus: consensus is frozen at Sapling
+on both mainnet and testnet (Canopy, which would gate ZIP-212, is not in Verus's
+upgrade set).
 
 ## License
 
-Apache-2.0.
+Apache-2.0. See [LICENSE](LICENSE). Third-party provenance for the WASM prover's
+bundled Rust crates and the proving parameters is in [NOTICE](NOTICE).
