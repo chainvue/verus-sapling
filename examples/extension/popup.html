@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light dark; }
+      body { font: 13px/1.4 system-ui, sans-serif; width: 360px; margin: 0; padding: 12px; }
+      h1 { font-size: 14px; margin: 0 0 8px; }
+      fieldset { border: 1px solid #8884; border-radius: 6px; margin: 0 0 10px; padding: 8px; }
+      legend { font-weight: 600; padding: 0 4px; }
+      label { display: block; margin: 6px 0 2px; font-size: 11px; opacity: 0.8; }
+      input, textarea, select { width: 100%; box-sizing: border-box; font: inherit; padding: 4px 6px;
+        border: 1px solid #8886; border-radius: 4px; background: transparent; color: inherit; }
+      textarea { resize: vertical; min-height: 40px; font-family: ui-monospace, monospace; font-size: 11px; }
+      button { font: inherit; padding: 5px 10px; margin-top: 8px; border-radius: 5px; cursor: pointer;
+        border: 1px solid #8886; background: #6c8cff22; color: inherit; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .row { display: flex; gap: 6px; }
+      .row > * { flex: 1; }
+      #status { font-size: 11px; opacity: 0.85; margin: 4px 0; min-height: 15px; }
+      #log { font-family: ui-monospace, monospace; font-size: 10px; white-space: pre-wrap;
+        max-height: 130px; overflow: auto; background: #8881; border-radius: 4px; padding: 6px; margin-top: 8px; }
+      .note { padding: 5px 6px; border: 1px solid #8884; border-radius: 4px; margin: 4px 0; cursor: pointer; font-size: 11px; }
+      .note.sel { border-color: #6c8cff; background: #6c8cff22; }
+      .muted { opacity: 0.6; }
+    </style>
+  </head>
+  <body>
+    <h1>Verus Shielded Demo <span class="muted">(testnet)</span></h1>
+    <div id="status">loading…</div>
+
+    <fieldset>
+      <legend>Connection</legend>
+      <label>lightwalletd gRPC-web proxy</label>
+      <input id="lwdUrl" value="http://localhost:8080" />
+      <label>params base URL (static host for sapling-*.params)</label>
+      <input id="paramsUrl" value="http://localhost:8081" />
+      <button id="initBtn">Load prover + params</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Wallet</legend>
+      <label>spending key (extsk hex, 169 bytes)</label>
+      <textarea id="extsk" placeholder="03…"></textarea>
+      <label>scan from height</label>
+      <input id="fromHeight" type="number" value="1157500" />
+      <button id="detectBtn" disabled>Detect my notes</button>
+      <div id="notes"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Inbox 📩</legend>
+      <button id="inboxBtn" disabled>Read my messages</button>
+      <div id="inbox"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Send private</legend>
+      <label>recipient (zs address)</label>
+      <input id="recipient" placeholder="zs1…" />
+      <div class="row">
+        <div><label>amount (VRSC)</label><input id="amount" placeholder="1.0" /></div>
+        <div><label>fee (VRSC)</label><input id="fee" value="0.0001" /></div>
+      </div>
+      <label>memo</label>
+      <input id="memo" placeholder="hello, privately" />
+      <label>change address (zs — your own; required unless amount = note − fee)</label>
+      <input id="changeAddr" placeholder="zs1… (your own address)" />
+      <div id="changePreview" class="muted" style="font-size:11px;margin-top:4px"></div>
+      <button id="sendBtn" disabled>Build + broadcast</button>
+    </fieldset>
+
+    <div id="log"></div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

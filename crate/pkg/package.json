@@ -1,0 +1,17 @@
+{
+  "name": "verus-sapling-prover",
+  "type": "module",
+  "description": "Sapling proving/signing core for Verus shielded transactions (t->z, z->z, z->t). Native + wasm32.",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "files": [
+    "verus_sapling_prover_bg.wasm",
+    "verus_sapling_prover.js",
+    "verus_sapling_prover.d.ts"
+  ],
+  "main": "verus_sapling_prover.js",
+  "types": "verus_sapling_prover.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

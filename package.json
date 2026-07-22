@@ -1,0 +1,57 @@
+{
+  "name": "@chainvue/verus-sapling",
+  "version": "0.0.0",
+  "description": "Offline signing of Verus shielded (Sapling) transactions — t→z, z→z, z→t, with memo. Companion to @chainvue/verus-sdk. Builds and signs bytes; consumers broadcast. WASM prover, no full node on the signing host.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./lightwalletd": {
+      "types": "./dist/lightwalletd.d.ts",
+      "default": "./dist/lightwalletd.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.js"
+    },
+    "./prover-worker": {
+      "types": "./dist/browser/prover-worker.d.ts",
+      "default": "./dist/browser/prover-worker.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:ext": "tsc && node examples/extension/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "@chainvue/verus-sdk": ">=0.14.0"
+  },
+  "optionalDependencies": {
+    "@grpc/grpc-js": "^1.10.0",
+    "@grpc/proto-loader": "^0.7.0"
+  },
+  "devDependencies": {
+    "@chainvue/verus-sdk": ">=0.14.0",
+    "@grpc/grpc-js": "^1.10.0",
+    "@grpc/proto-loader": "^0.7.0",
+    "@types/node": "^22",
+    "esbuild": "^0.24.2",
+    "typescript": "^5",
+    "vitest": "^2"
+  },
+  "//": "The concrete lightwalletd gRPC client (@chainvue/verus-sapling/lightwalletd) needs @grpc/grpc-js — an OPTIONAL dependency: the browser path implements LightwalletdTransport over gRPC-web instead, and the package root pulls in no gRPC at runtime.",
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
