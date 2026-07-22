@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security vulnerability
+    url: https://github.com/chainvue/verus-sapling/security/advisories/new
+    about: Report a vulnerability privately. Do NOT open a public issue for security bugs — see SECURITY.md.
+  - name: 💬 Questions & discussion
+    url: https://github.com/chainvue/verus-sapling/discussions
+    about: Usage questions, ideas, and general discussion.
