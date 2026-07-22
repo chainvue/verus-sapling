@@ -44,6 +44,12 @@ BSD-3-Clause licenses accompany the respective upstream projects; see each
 crate's repository (https://github.com/zcash, https://github.com/zkcrypto,
 https://github.com/ZcashFoundation) for its license text and copyright notices.
 
+Bundled protobuf definitions (proto/*.proto):
+  * The lightwalletd gRPC definitions (compact_formats.proto, service.proto,
+    darkside.proto) are the stock Zcash lightwalletd protos.
+    Copyright (c) 2019-2020 The Zcash developers. License: MIT (each file
+    retains its MIT header). Verus's lightwalletd fork does not modify them.
+
 --------------------------------------------------------------------------------
 Proving parameters — NOT bundled
 --------------------------------------------------------------------------------

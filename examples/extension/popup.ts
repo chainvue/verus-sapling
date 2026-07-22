@@ -70,7 +70,10 @@ async function detect(): Promise<void> {
   notesEl.textContent = '';
   const extskHex = $('extsk').value.trim();
   const fromHeight = Number($('fromHeight').value);
-  chrome.storage?.local.set({ extsk: extskHex, lwdUrl: $('lwdUrl').value, fromHeight: String(fromHeight) });
+  // Spending key → session storage (in-memory, never written to disk, cleared
+  // when the browser closes). Only non-secret settings go to local (disk).
+  chrome.storage?.session?.set({ extsk: extskHex });
+  chrome.storage?.local.set({ lwdUrl: $('lwdUrl').value, fromHeight: String(fromHeight) });
   try {
     setStatus('scanning compact blocks…');
     const notes = await detectNotes(client, prover.detect, { key: { extskHex }, fromHeight });
@@ -224,9 +227,12 @@ async function txidFromHex(hex: string): Promise<string> {
   return bytesToHex(reverseBytes(h2));
 }
 
-// Restore saved config, wire buttons.
-chrome.storage?.local.get(['extsk', 'lwdUrl', 'fromHeight'], (v) => {
+// Restore config. Spending key comes from session storage (in-memory, this
+// browser session only); non-secret settings come from local (disk).
+chrome.storage?.session?.get(['extsk'], (v) => {
   if (v.extsk) $('extsk').value = v.extsk;
+});
+chrome.storage?.local.get(['lwdUrl', 'fromHeight'], (v) => {
   if (v.lwdUrl) $('lwdUrl').value = v.lwdUrl;
   if (v.fromHeight) $('fromHeight').value = v.fromHeight;
 });

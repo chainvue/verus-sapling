@@ -14,8 +14,10 @@ popup (main thread)                         Web Worker
 ```
 
 > **Testnet demo, not hardened.** You paste a testnet spending key into the
-> popup; it's kept in `chrome.storage.local` for convenience. Don't use a
-> mainnet key.
+> popup; it is kept in `chrome.storage.session` (in-memory, never written to
+> disk, cleared when the browser closes) — never `chrome.storage.local`. Only
+> non-secret settings (lightwalletd URL, scan height) are persisted to disk.
+> Still: don't use a mainnet key. See [`SECURITY.md`](../../SECURITY.md).
 
 ## Prerequisites (local demo — no tunnel, no TLS, $0)
 
