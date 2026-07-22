@@ -19,10 +19,11 @@ popup (main thread)                         Web Worker
 
 ## Prerequisites (local demo — no tunnel, no TLS, $0)
 
-1. **gRPC-web proxy reachable at `localhost:8080`.** `grpcwebproxy` runs on the
-   testnet VM (systemd `grpcwebproxy.service`); forward it to your laptop:
+1. **gRPC-web proxy reachable at `localhost:8080`.** Run `grpcwebproxy` in front
+   of your Verus lightwalletd. If it lives on a remote host, forward it to your
+   laptop (replace `<lightwalletd-host>` with your SSH host):
    ```bash
-   ssh -N -L 8080:127.0.0.1:8080 vrsc-testnet
+   ssh -N -L 8080:127.0.0.1:8080 <lightwalletd-host>
    ```
    `http://localhost` is a browser-trustworthy origin, so no HTTPS is needed.
 

@@ -14,6 +14,18 @@ examples/extension/build/
 .DS_Store
 *.log
 
+# secrets & sensitive material — NEVER commit (defensive; keys are user-supplied
+# at runtime, never checked in). Spending keys, viewing keys, env, proving params.
+.env
+.env.*
+*.key
+*.pem
+*extsk*
+*spending-key*
+*secret-extended-key*
+*.params
+zcash-params/
+
 # NOTE: crate/pkg/ (the wasm-pack output) IS committed on purpose — it's the
 # shipped prover artifact and lets a fresh clone typecheck without a Rust +
 # wasm-pack toolchain. Rebuild it with `wasm-pack build --target web --release`.

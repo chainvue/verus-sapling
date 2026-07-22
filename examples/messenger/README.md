@@ -27,8 +27,8 @@ Everything is client-side; the spending/viewing key never leaves the process.
 ## Run
 
 Prereqs (same as the extension demo): the gRPC-web proxy at `http://localhost:8080`
-(`ssh -N -L 8080:127.0.0.1:8080 vrsc-testnet`), the wasm built (`crate/pkg`), and
-the package built (`npm run build`). Then:
+(`ssh -N -L 8080:127.0.0.1:8080 <lightwalletd-host>`), the wasm built (`crate/pkg`),
+and the package built (`npm run build`). Then:
 
 ```bash
 node examples/messenger/demo.mjs <extsk-file> <my-zs-address> <fromHeight> ["message"]
