@@ -64,6 +64,7 @@ pub fn build_z2z_tx(
         spend,
         core::slice::from_ref(output),
         &[],
+        None, // convenience wrapper: conservation check left to the caller
         expiry_height,
         branch_id,
         zip212,
@@ -85,10 +86,25 @@ fn node(bytes: [u8; 32]) -> Result<Node, String> {
 /// the Sapling builder as note_value - sum(shielded output values), which must
 /// equal sum(transparent output values) + fee.
 #[allow(clippy::too_many_arguments)]
+/// Copy a slice into a fixed-size array, erroring (not panicking) on a length
+/// mismatch — used at the untrusted-spec boundary.
+fn to_array<const N: usize>(v: &[u8], field: &str) -> Result<[u8; N], String> {
+    if v.len() != N {
+        return Err(format!("{field}: expected {N} bytes, got {}", v.len()));
+    }
+    let mut a = [0u8; N];
+    a.copy_from_slice(v);
+    Ok(a)
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn build_zspend_tx(
     spend: &SpendInput,
     shielded_outputs: &[Z2zOutput],
     transparent_outputs: &[TxOut],
+    // Declared miner fee. When `Some`, value conservation is enforced against the
+    // decrypted note value; when `None` the check is skipped (back-compat).
+    fee: Option<u64>,
     expiry_height: u32,
     branch_id: u32,
     zip212: Zip212Enforcement,
@@ -111,12 +127,11 @@ pub fn build_zspend_tx(
         .ok_or("bad out_cv")?;
     let cmu =
         Option::from(ExtractedNoteCommitment::from_bytes(&spend.out_cmu)).ok_or("bad out_cmu")?;
-    let mut enc = [0u8; 580];
-    enc.copy_from_slice(&spend.out_enc);
-    let mut oct = [0u8; 80];
-    oct.copy_from_slice(&spend.out_ct);
-    let mut proof = [0u8; 192];
-    proof.copy_from_slice(&spend.out_proof);
+    // Length-checked (was copy_from_slice, which panics / aborts the wasm on a
+    // malformed spec).
+    let enc = to_array::<580>(&spend.out_enc, "out_enc")?;
+    let oct = to_array::<80>(&spend.out_ct, "out_ct")?;
+    let proof = to_array::<192>(&spend.out_proof, "out_proof")?;
     let od: OutputDescription<GrothProofBytes> = OutputDescription::from_parts(
         cv,
         cmu,
@@ -129,6 +144,27 @@ pub fn build_zspend_tx(
     let (note, _addr, _memo) = try_sapling_note_decryption(&prepared_ivk, &od, zip212)
         .ok_or("note decryption failed (wrong key / zip212 setting)")?;
 
+    // Value conservation (authoritative): the decrypted note value must equal the
+    // sum of every output plus the declared fee. The daemon only rejects a
+    // NEGATIVE fee; a positive overshoot (e.g. a forgotten change output) is a
+    // valid, eagerly-mined tx that donates the excess to miners.
+    if let Some(fee) = fee {
+        let note_value = note.value().inner();
+        let mut outs: u64 = 0;
+        for o in shielded_outputs {
+            outs = outs.checked_add(o.value).ok_or("output value overflow")?;
+        }
+        for o in transparent_outputs {
+            outs = outs.checked_add(o.value).ok_or("output value overflow")?;
+        }
+        let expected = outs.checked_add(fee).ok_or("outputs + fee overflow")?;
+        if note_value != expected {
+            return Err(format!(
+                "value conservation failed: note {note_value} != outputs {outs} + fee {fee}"
+            ));
+        }
+    }
+
     // --- build the witness for the note ---
     let left = spend.tree_left.map(node).transpose()?;
     let right = spend.tree_right.map(node).transpose()?;
@@ -139,6 +175,16 @@ pub fn build_zspend_tx(
         .collect::<Result<Vec<Option<Node>>, String>>()?;
     let mut tree = CommitmentTree::from_parts(left, right, parents)
         .map_err(|_| "tree parents too deep".to_string())?;
+
+    // Bounds-check before `my_cmu_index + 1` (which would otherwise silently take
+    // fewer cmus, or wrap in release if the index were usize::MAX).
+    if spend.my_cmu_index >= spend.block_cmus.len() {
+        return Err(format!(
+            "my_cmu_index {} out of range ({} block cmus)",
+            spend.my_cmu_index,
+            spend.block_cmus.len()
+        ));
+    }
 
     // Append cmus up to and including ours; snapshot the witness; advance it
     // with the remaining cmus in the block.

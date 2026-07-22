@@ -53,6 +53,23 @@ fn opt32(v: &Value) -> Result<Option<[u8; 32]>, String> {
 fn u64f(v: &Value, field: &str) -> Result<u64, String> {
     v.as_u64().ok_or_else(|| format!("{field}: expected u64"))
 }
+/// Parse a u32 field, erroring (not truncating) if it exceeds u32::MAX.
+fn u32f(v: &Value, field: &str) -> Result<u32, String> {
+    u32::try_from(u64f(v, field)?).map_err(|_| format!("{field}: exceeds u32"))
+}
+/// Optional u32 field with a default when absent/null.
+fn u32f_or(v: &Value, field: &str, default: u32) -> Result<u32, String> {
+    if v.is_null() {
+        Ok(default)
+    } else {
+        u32f(v, field)
+    }
+}
+/// Parse a usize field, erroring if it exceeds usize (32-bit on wasm32 — a large
+/// value would otherwise truncate to a valid-looking but wrong index).
+fn usizef(v: &Value, field: &str) -> Result<usize, String> {
+    usize::try_from(u64f(v, field)?).map_err(|_| format!("{field}: exceeds usize"))
+}
 fn memo512(v: &Value) -> [u8; 512] {
     let mut memo = [0u8; 512];
     let m = v.as_str().unwrap_or("").as_bytes();
@@ -98,13 +115,12 @@ pub fn build_t2z_from_json(
 
     let mut inputs = Vec::new();
     for i in j["inputs"].as_array().ok_or("inputs: expected array")? {
-        let mut txid = h(&i["txid_display"], "txid_display")?;
-        txid.reverse();
-        let mut txid_internal = [0u8; 32];
-        txid_internal.copy_from_slice(&txid);
+        // h32 length-checks (was copy_from_slice, which panics on a bad-length txid).
+        let mut txid_internal = h32(&i["txid_display"], "txid_display")?;
+        txid_internal.reverse(); // display -> internal byte order
         inputs.push(TxIn {
             txid_internal,
-            vout: u64f(&i["vout"], "vout")? as u32,
+            vout: u32f(&i["vout"], "vout")?,
             sequence: i["sequence"].as_u64().unwrap_or(0xffff_ffff) as u32,
         });
     }
@@ -132,9 +148,9 @@ pub fn build_t2z_from_json(
         &inputs,
         &outputs,
         &shielded,
-        j["lock_time"].as_u64().unwrap_or(0) as u32,
-        u64f(&j["expiry_height"], "expiry_height")? as u32,
-        u64f(&j["branch_id"], "branch_id")? as u32,
+        u32f_or(&j["lock_time"], "lock_time", 0)?,
+        u32f(&j["expiry_height"], "expiry_height")?,
+        u32f(&j["branch_id"], "branch_id")?,
         sp,
         op,
         ZIP212,
@@ -176,7 +192,7 @@ pub fn build_zspend_from_json(
         tree_right: opt32(&j["tree"]["right"])?,
         tree_parents,
         block_cmus,
-        my_cmu_index: u64f(&j["my_cmu_index"], "my_cmu_index")? as usize,
+        my_cmu_index: usizef(&j["my_cmu_index"], "my_cmu_index")?,
     };
 
     // shielded outputs: "shielded_outputs" array, or a single "output"
@@ -208,8 +224,12 @@ pub fn build_zspend_from_json(
         &spend,
         &shielded_outputs,
         &transparent_outputs,
-        u64f(&j["expiry_height"], "expiry_height")? as u32,
-        u64f(&j["branch_id"], "branch_id")? as u32,
+        // The declared fee: the Rust builder re-checks value conservation against
+        // the DECRYPTED note value (authoritative). Optional for back-compat: if
+        // absent, the check is skipped (the TS layer already enforces it).
+        j.get("fee").map(|v| u64f(v, "fee")).transpose()?,
+        u32f(&j["expiry_height"], "expiry_height")?,
+        u32f(&j["branch_id"], "branch_id")?,
         ZIP212,
         sp,
         op,
