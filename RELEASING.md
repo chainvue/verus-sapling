@@ -26,33 +26,34 @@ via the **workflow_dispatch → dry-run** button on the Release workflow.
   `crate/pkg/` (the committed wasm), `LICENSE`, `NOTICE`, `README.md`. Verify
   with `npm pack --dry-run`.
 
-## One-time setup (before the first push to `main`)
+## One-time setup
 
-1. **Create the GitHub repo and remote**, then push. Until then the pipeline is
-   inert (no CI host).
+The GitHub repo, the push, and the `v0.0.0` baseline tag are already in place.
+Three steps remain, **in order** — npm OIDC trusted publishing needs the package
+to exist first, so the very first publish is a manual bootstrap:
 
-2. **Register the npm trusted publisher** for `@chainvue/verus-sapling`:
-   npmjs.com → the package (or your org) → *Settings → Trusted publishers* → add
-   the GitHub repo and workflow `release.yml`. Without this, `npm publish` in CI
-   fails with `ENEEDAUTH`. (Alternative: set an `NPM_TOKEN` secret and switch the
-   exec `publishCmd` back to a token-based publish — less secure.)
-
-   Then **activate the Release workflow**: GitHub → repo *Settings → Secrets and
-   variables → Actions → Variables* → add `RELEASE_ENABLED = true`. Until this is
-   set, the `release` job is skipped (so pushes to `main` don't fail on missing
-   npm auth); once set, every push to `main` releases.
-
-3. **Seed the baseline tag** so the first computed release is `0.0.1`, not
-   semantic-release's default first version of `1.0.0`:
+1. **Bootstrap the package with one manual publish.** From a clean checkout,
+   logged in to npm as a `@chainvue` member:
 
    ```bash
-   git tag v0.0.0 <initial-commit-sha>   # e.g. the "Initial commit" sha
-   git push origin v0.0.0
+   npm login
+   npm publish --access public   # `prepack` builds dist/; creates the package
    ```
 
-   From that baseline the accumulated `fix:` commits compute `0.0.1`. If you
-   would rather start at `0.1.0`, land a `feat:` commit before the first release
-   (or tag the desired starting point minus one increment).
+   This publishes the current `package.json` version. Semantic-release owns every
+   version *after*: from the `v0.0.0` tag + the accrued `fix:` commits it computes
+   `0.0.1` on the next release.
+
+2. **Configure OIDC trusted publishing** (now that the package exists):
+   npmjs.com → the `@chainvue/verus-sapling` package → *Settings → Trusted
+   Publisher* → **GitHub Actions**, repository `chainvue/verus-sapling`, workflow
+   `release.yml`. Token-less; provenance via `id-token: write`. No `NPM_TOKEN`
+   secret needed.
+
+3. **Activate the Release workflow**: GitHub → repo *Settings → Secrets and
+   variables → Actions → Variables* → add `RELEASE_ENABLED = true`. Until set, the
+   `release` job is skipped (green); once set, every push to `main` releases via
+   OIDC.
 
 ## Local dry-run
 
