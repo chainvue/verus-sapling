@@ -51,9 +51,16 @@ Requires the Rust toolchain plus `wasm-pack` and the wasm target:
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
 wasm-pack build crate --target web --release   # regenerates crate/pkg/
+rm -f crate/pkg/.gitignore                      # see the gotcha below
 ```
 
 Commit the regenerated `crate/pkg/` in the same PR.
+
+> **Gotcha:** `wasm-pack` writes a `crate/pkg/.gitignore` containing `*`. npm
+> honors it and **drops the entire `crate/pkg/` (the wasm!) from the published
+> tarball**, shipping a broken package. Always `rm crate/pkg/.gitignore` after
+> building, and confirm with `npm pack --dry-run | grep crate/pkg` (you should
+> see the `.wasm`).
 
 ### Running the examples
 
