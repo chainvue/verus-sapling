@@ -14,6 +14,7 @@
 //! next, clearly-scoped pieces. Passing a real sighash is required before the
 //! binding signature is chain-valid; `prove_shield` accepts it as a parameter.
 
+pub mod golden;
 pub mod json_api;
 pub mod scan;
 pub mod tx;
