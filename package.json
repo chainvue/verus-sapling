@@ -1,6 +1,6 @@
 {
   "name": "@chainvue/verus-sapling",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Offline signing of Verus shielded (Sapling) transactions — t→z, z→z, z→t, with memo. Companion to @chainvue/verus-sdk. Builds and signs bytes; consumers broadcast. WASM prover, no full node on the signing host.",
   "license": "Apache-2.0",
   "author": "Robert Lech",
