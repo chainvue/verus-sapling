@@ -1,14 +1,5 @@
 # @chainvue/verus-sapling
 
-<p>
-  <a href="https://github.com/chainvue/verus-sapling/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/chainvue/verus-sapling/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://www.npmjs.com/package/@chainvue/verus-sapling"><img alt="npm" src="https://img.shields.io/npm/v/@chainvue/verus-sapling?color=cb3837&logo=npm"></a>
-  <img alt="node" src="https://img.shields.io/node/v/@chainvue/verus-sapling">
-  <img alt="types" src="https://img.shields.io/badge/types-included-3178c6?logo=typescript&logoColor=white">
-  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
-  <img alt="offline" src="https://img.shields.io/badge/network-none%20in%20signer-success">
-</p>
-
 > **Offline signing of Verus _shielded_ (Sapling) transactions** — `t→z`, `z→z`,
 > `z→t`, with encrypted memos. It builds and signs bytes; your consumer
 > broadcasts. **No full node on the signing host.**
@@ -177,8 +168,7 @@ test/           vitest suite (money, hex, protobuf, gRPC-web, wallet, zaddr, …
 ```
 
 Docs: [SECURITY](SECURITY.md) · [CONTRIBUTING](CONTRIBUTING.md) ·
-[RELEASING](RELEASING.md) · [NOTICE](NOTICE) ·
-[Code of Conduct](CODE_OF_CONDUCT.md)
+[RELEASING](RELEASING.md) · [NOTICE](NOTICE)
 
 ## Contributing
 
