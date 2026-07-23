@@ -73,14 +73,14 @@
     "@chainvue/verus-sdk": ">=0.14.0",
     "@grpc/grpc-js": "^1.10.0",
     "@grpc/proto-loader": "^0.8.1",
-    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@types/node": "^22",
-    "esbuild": "^0.24.2",
+    "@semantic-release/git": "^11.0.0",
+    "@types/node": "^26.1.1",
+    "esbuild": "^0.28.1",
     "semantic-release": "^25.0.7",
-    "typescript": "^5",
-    "vitest": "^2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "//": "The concrete lightwalletd gRPC client (@chainvue/verus-sapling/lightwalletd) needs @grpc/grpc-js — an OPTIONAL dependency: the browser path implements LightwalletdTransport over gRPC-web instead, and the package root pulls in no gRPC at runtime.",
   "publishConfig": {
