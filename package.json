@@ -67,12 +67,12 @@
   },
   "optionalDependencies": {
     "@grpc/grpc-js": "^1.10.0",
-    "@grpc/proto-loader": "^0.7.0"
+    "@grpc/proto-loader": "^0.8.1"
   },
   "devDependencies": {
     "@chainvue/verus-sdk": ">=0.14.0",
     "@grpc/grpc-js": "^1.10.0",
-    "@grpc/proto-loader": "^0.7.0",
+    "@grpc/proto-loader": "^0.8.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
