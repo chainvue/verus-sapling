@@ -1,5 +1,10 @@
 # @chainvue/verus-sapling
 
+[![npm](https://img.shields.io/npm/v/%40chainvue%2Fverus-sapling)](https://www.npmjs.com/package/@chainvue/verus-sapling)
+[![CI](https://github.com/chainvue/verus-sapling/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chainvue/verus-sapling/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/%40chainvue%2Fverus-sapling)](./LICENSE)
+[![node](https://img.shields.io/node/v/%40chainvue%2Fverus-sapling)](https://nodejs.org)
+
 > **Offline signing of Verus _shielded_ (Sapling) transactions** — `t→z`, `z→z`,
 > `z→t`, with encrypted memos. It builds and signs bytes; your consumer
 > broadcasts. **No full node on the signing host.**
