@@ -49,12 +49,35 @@ Requires the Rust toolchain plus `wasm-pack` and the wasm target:
 
 ```bash
 rustup target add wasm32-unknown-unknown
-cargo install wasm-pack
-wasm-pack build crate --target web --release   # regenerates crate/pkg/
-rm -f crate/pkg/.gitignore                      # see the gotcha below
+cargo install wasm-pack --version 0.14.0 --locked   # pinned: see below
+wasm-pack build crate --target web --release        # regenerates crate/pkg/
+rm -f crate/pkg/.gitignore                          # see the gotcha below
 ```
 
-Commit the regenerated `crate/pkg/` in the same PR.
+Commit the regenerated `crate/pkg/` in the same PR, so CI's Node-only jobs
+exercise the binary your source actually produces.
+
+**What is committed is not what gets published.** The release job rebuilds the
+prover from the tagged source with the pinned toolchain and publishes *that*,
+then commits the result back in the release commit. This exists because v0.1.0
+shipped a stale binary — one that did not rebuild from its own tag — since
+committing the artifact is a human step and the step was missed. Keeping the
+copy in git is a convenience (it keeps `npm run build` / `typecheck` / `test`
+working without a Rust toolchain); it is not the source of truth for npm.
+
+**Versions are pinned in three places and must agree:** `crate/rust-toolchain.toml`,
+the two Rust jobs in `.github/workflows/ci.yml`, and the release job in
+`.github/workflows/release.yml` — rustc `1.95.0`, wasm-pack `0.14.0`. wasm-pack
+bundles the `wasm-opt` that rewrites the binary, so an unpinned install changes
+the output bytes on its own.
+
+> **Byte-for-byte reproduction across machines is not achieved.** The binary
+> embeds ~60 absolute `CARGO_HOME` paths (dependency sources reached through
+> panic locations), so a build with a different home directory differs no matter
+> how the toolchain is pinned — which is why `wasm-drift` reports a warning
+> rather than failing. Closing that would need `--remap-path-prefix` at every
+> build site; Cargo's `trim-paths`, the clean fix, is still unstable as of Cargo
+> 1.97.1.
 
 > **Gotcha:** `wasm-pack` writes a `crate/pkg/.gitignore` containing `*`. npm
 > honors it and **drops the entire `crate/pkg/` (the wasm!) from the published

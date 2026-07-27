@@ -80,10 +80,12 @@ jobs:
   # is a HARD gate (catches source that no longer builds for wasm32). Both inputs
   # that decide the output bytes are now pinned — rustc (1.95.0, matching
   # crate/rust-toolchain.toml) and wasm-pack/wasm-opt (0.14.0) — so drift should
-  # no longer be routine. It is still reported as a WARNING rather than a failure
-  # until a few runs confirm the pins are SUFFICIENT (a rustup build and the
-  # Homebrew build that produced the committed pkg may still differ); promoting
-  # it to a hard gate is then a one-line change.
+  # no longer be routine. It stays a WARNING rather than a failure because the
+  # pins are NOT sufficient on their own: the binary embeds absolute CARGO_HOME
+  # paths, so a runner with a different home cannot match byte-for-byte. What
+  # protects the published package is release.yml, which rebuilds the prover
+  # from the tagged source and publishes that — this job only tells you the
+  # committed convenience copy has gone stale.
   wasm-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 30
