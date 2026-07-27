@@ -20,6 +20,7 @@ import initWasm, {
   spend_shielded,
   detect_notes,
   read_note,
+  derive_account,
 } from '../crate/pkg/verus_sapling_prover.js';
 
 import { ShieldedError } from './errors.js';
@@ -135,4 +136,27 @@ export interface ReadNoteResult {
  */
 export function readNote(specJson: string): ReadNoteResult | null {
   return JSON.parse(read_note(specJson)) as ReadNoteResult | null;
+}
+
+/** A ZIP-32-derived Sapling account, raw from the wasm boundary (all hex). */
+export interface DerivedAccountRaw {
+  /** Extended spending key, 169 bytes. CAN SPEND. */
+  extsk_hex: string;
+  /** Diversifiable full viewing key, 128 bytes — scanning only. */
+  dfvk_hex: string;
+  /** Raw 43-byte payment address. */
+  address_hex: string;
+  /** 11-byte diversifier index the default address was found at. */
+  diversifier_index_hex: string;
+}
+
+/**
+ * Derive a Sapling account from a BIP-39 seed via ZIP-32
+ * `m/32'/coin_type'/account'` (see the Rust `json_api::derive_account_from_json`).
+ * No params, no proving — but the wasm module must be initialized. Prefer
+ * `deriveSaplingAccount` in `derive.ts`, which also does the BIP-39 step and
+ * bech32-encodes the address.
+ */
+export function deriveAccountWasm(specJson: string): DerivedAccountRaw {
+  return JSON.parse(derive_account(specJson)) as DerivedAccountRaw;
 }

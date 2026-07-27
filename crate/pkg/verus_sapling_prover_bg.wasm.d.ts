@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const derive_account: (a: number, b: number) => [number, number, number, number];
 export const detect_notes: (a: number, b: number) => [number, number, number, number];
 export const read_note: (a: number, b: number) => [number, number, number, number];
 export const shield_t2z: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];

@@ -97,6 +97,44 @@ ZIP-212 enforcement is `Off`. The only Verus-specific value in the entire path i
 that branch id, injected into the sighash. Even the lightwalletd wire protocol is
 stock — `VerusCoin/lightwalletd`'s protos are byte-identical to Zcash's.
 
+### Recovery phrases: one phrase, two unrelated key schedules
+
+A Verus Mobile wallet derives **both** of its keys from a single recovery
+phrase — by two derivations that share nothing:
+
+| | transparent (`R…`) | shielded (`zs…`) |
+|---|---|---|
+| derivation | `sha256(utf8(phrase))` + Agama/Iguana clamp | BIP-39 → ZIP-32 |
+| BIP-39 | ignored — the phrase is hashed as text | required, real PBKDF2 |
+| path | none — one key per phrase, no HD | `m/32'/coin'/account'` |
+| network | mainnet ≡ testnet | coin type 133 on **both** (see below) |
+| lives in | [`@chainvue/verus-sdk`](https://www.npmjs.com/package/@chainvue/verus-sdk) `keys.seedToWif` | `deriveSaplingAccount` (here) |
+
+```ts
+import { deriveSaplingAccount, initSapling } from '@chainvue/verus-sapling';
+
+await initSapling(wasmBytes);
+const account = await deriveSaplingAccount({ mnemonic: phrase }); // coinType 133, account 0
+account.address;   // zs… — compare against your wallet before relying on it
+account.extskHex;  // spending key, the form every builder here takes
+account.dfvkHex;   // viewing key — enough to scan, cannot spend
+```
+
+Consequences worth internalizing: the phrase must be a **valid BIP-39 mnemonic**
+for a z-address to exist at all (Verus Mobile gates its shielded account on
+`validateMnemonic()` + ≥12 words, while the transparent side accepts any string),
+so the same words produce unrelated keys on the two sides.
+
+**Coin type 133 on both networks — including VRSCTEST.** Verus Mobile's
+`parseDlightSeed` calls `Tools.deriveSaplingSpendingKey(seed)` with no network
+argument, so the Kotlin bridge's `networks.getOrDefault(network,
+ZcashNetwork.Mainnet)` falls back to mainnet and a testnet wallet holds a
+mainnet-path key. Verified 2026-07-28 against a live VRSCTEST wallet: of five
+candidate paths, only `m/32'/133'/0'` reproduced the address the app shows. The
+default here matches that; `COIN_TYPE_VRSCTEST` (1) exists for stock-zcash
+tooling and derives a key no Verus Mobile wallet holds. The address HRP is `zs`
+on both networks either way.
+
 ### Backend: the one unavoidable dependency
 
 - **`t→z` (shielding)** needs **no** commitment-tree witness — only the

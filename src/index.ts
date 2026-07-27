@@ -30,7 +30,18 @@ export * from './errors.js';
 export * from './parse.js';
 export { CONSENSUS_BRANCH_ID, parseSats, toSafeNumber } from './money.js';
 export { bytesToHex, hexToBytes, reverseBytes } from './hex.js';
-export { decodeSaplingAddress, saplingAddressToHex } from './zaddr.js';
+export { decodeSaplingAddress, saplingAddressToHex, encodeSaplingAddress } from './zaddr.js';
+
+// Shielded key derivation from a BIP-39 recovery phrase (ZIP-32 m/32'/coin'/account').
+// `mnemonicToSeed` is pure; `deriveSaplingAccount` needs the wasm module.
+export {
+  mnemonicToSeed,
+  deriveSaplingAccount,
+  COIN_TYPE_VRSC,
+  COIN_TYPE_VRSCTEST,
+  type SaplingAccount,
+  type DeriveSaplingAccountParams,
+} from './derive.js';
 
 // wasm prover loaders + low-level builders (init once, then call).
 export {
@@ -39,11 +50,13 @@ export {
   spendShielded,
   detectNotes as detectNotesWasm,
   readNote,
+  deriveAccountWasm,
   verifyCanonicalParams,
   PARAM_SHA256,
   type SaplingParams,
   type DetectedNoteRaw,
   type ReadNoteResult,
+  type DerivedAccountRaw,
 } from './wasm.js';
 
 // Shielded wallet orchestration (transport- and prover-agnostic).

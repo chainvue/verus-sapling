@@ -1,6 +1,35 @@
 /* @ts-self-types="./verus_sapling_prover.d.ts" */
 
 /**
+ * Derive a Sapling account (spending key, viewing key, default address) from a
+ * BIP-39 seed via ZIP-32 `m/32'/coin_type'/account'`. `spec_json` is the
+ * derivation request (see `json_api::derive_account_from_json`). No params, no
+ * proving — cheap, safe on the main thread.
+ * @param {string} spec_json
+ * @returns {string}
+ */
+export function derive_account(spec_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(spec_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.derive_account(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
  * Detect the wallet's own notes by trial-decrypting compact outputs (read path
  * — no params, no proving). `spec_json` is the note-detection request (see
  * `json_api::detect_notes_from_json`). Returns a JSON array of detected notes.

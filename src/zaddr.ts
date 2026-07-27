@@ -104,3 +104,31 @@ export function decodeSaplingAddress(addr: string): Uint8Array {
 export function saplingAddressToHex(addr: string): string {
   return bytesToHex(decodeSaplingAddress(addr));
 }
+
+function bech32Encode(hrp: string, data: number[]): string {
+  // Checksum over hrp || data || six zero symbols, xor 1 (bech32, not bech32m).
+  const checksum = bech32Polymod([...hrpExpand(hrp), ...data, 0, 0, 0, 0, 0, 0]) ^ 1;
+  const out = [...data];
+  for (let i = 0; i < 6; i++) out.push((checksum >> (5 * (5 - i))) & 31);
+  return `${hrp}1${out.map((v) => CHARSET[v]!).join('')}`;
+}
+
+/**
+ * Encode a raw 43-byte Sapling payment address as a `zs…` bech32 address — the
+ * inverse of `decodeSaplingAddress`, for addresses that are DERIVED rather than
+ * pasted in (see `derive.ts`).
+ *
+ * The HRP defaults to `zs` for BOTH Verus networks, matching what a live Verus
+ * daemon emits (see the note at the top of this file): unlike stock zcash there
+ * is no `ztestsapling` on vrsctest. The parameter exists only to interoperate
+ * with stock-zcash tooling that still expects that split.
+ */
+export function encodeSaplingAddress(
+  payload: Uint8Array,
+  hrp: 'zs' | 'ztestsapling' = 'zs',
+): string {
+  if (payload.length !== 43) {
+    throw new Error(`expected 43-byte payload, got ${payload.length}`);
+  }
+  return bech32Encode(hrp, convertBits([...payload], 8, 5, true));
+}

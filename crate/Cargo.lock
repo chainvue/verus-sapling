@@ -1090,6 +1090,7 @@ dependencies = [
  "serde_json",
  "wasm-bindgen",
  "zcash_note_encryption",
+ "zip32",
 ]
 
 [[package]]
