@@ -59,7 +59,6 @@
     "build:ext": "tsc && node examples/extension/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint .",
     "prepack": "npm run build"
   },
   "peerDependencies": {
