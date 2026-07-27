@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/chainvue/verus-sapling/compare/v0.1.0...v0.1.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **wasm:** ship the crate/pkg that main's source actually builds ([#9](https://github.com/chainvue/verus-sapling/issues/9)) ([23b8790](https://github.com/chainvue/verus-sapling/commit/23b8790a05525b1077ec168920eabd96c990e84e))
+
 # [0.1.0](https://github.com/chainvue/verus-sapling/compare/v0.0.1...v0.1.0) (2026-07-27)
 
 
