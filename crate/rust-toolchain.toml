@@ -1,7 +1,13 @@
 # Pins the toolchain for reproducible builds of the committed WASM prover
-# (crate/pkg). CI (dtolnay/rust-toolchain) and rustup users honor this; Homebrew
-# cargo ignores it. For a bit-reproducible pkg, pin an exact version here once the
-# committed artifact's build toolchain is confirmed.
+# (crate/pkg). rustup users honor this file; Homebrew cargo ignores it, and
+# dtolnay/rust-toolchain in CI takes its version from the workflow — so
+# .github/workflows/ci.yml pins the SAME version explicitly in both Rust jobs.
+# Change one, change the other.
+#
+# 1.95.0 is the toolchain that built the committed crate/pkg. wasm-pack is pinned
+# alongside it (0.14.0 in CI) because it also bundles the wasm-opt that rewrites
+# the binary. Both pins are necessary for byte-reproducibility; whether they are
+# sufficient is what the `wasm-drift` job reports.
 [toolchain]
-channel = "stable"
+channel = "1.95.0"
 targets = ["wasm32-unknown-unknown"]

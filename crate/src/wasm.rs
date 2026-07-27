@@ -8,7 +8,8 @@
 use wasm_bindgen::prelude::*;
 
 use crate::json_api::{
-    build_t2z_from_json, build_zspend_from_json, detect_notes_from_json, read_note_from_json,
+    build_t2z_from_json, build_zspend_from_json, derive_account_from_json, detect_notes_from_json,
+    read_note_from_json,
 };
 use crate::load_params_from_bytes;
 
@@ -53,6 +54,15 @@ pub fn detect_notes(spec_json: &str) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn read_note(spec_json: &str) -> Result<String, JsError> {
     read_note_from_json(spec_json).map_err(js)
+}
+
+/// Derive a Sapling account (spending key, viewing key, default address) from a
+/// BIP-39 seed via ZIP-32 `m/32'/coin_type'/account'`. `spec_json` is the
+/// derivation request (see `json_api::derive_account_from_json`). No params, no
+/// proving — cheap, safe on the main thread.
+#[wasm_bindgen]
+pub fn derive_account(spec_json: &str) -> Result<String, JsError> {
+    derive_account_from_json(spec_json).map_err(js)
 }
 
 fn js(e: String) -> JsError {

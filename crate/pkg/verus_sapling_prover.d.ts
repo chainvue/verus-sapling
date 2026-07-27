@@ -2,6 +2,14 @@
 /* eslint-disable */
 
 /**
+ * Derive a Sapling account (spending key, viewing key, default address) from a
+ * BIP-39 seed via ZIP-32 `m/32'/coin_type'/account'`. `spec_json` is the
+ * derivation request (see `json_api::derive_account_from_json`). No params, no
+ * proving — cheap, safe on the main thread.
+ */
+export function derive_account(spec_json: string): string;
+
+/**
  * Detect the wallet's own notes by trial-decrypting compact outputs (read path
  * — no params, no proving). `spec_json` is the note-detection request (see
  * `json_api::detect_notes_from_json`). Returns a JSON array of detected notes.
@@ -34,6 +42,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly derive_account: (a: number, b: number) => [number, number, number, number];
     readonly detect_notes: (a: number, b: number) => [number, number, number, number];
     readonly read_note: (a: number, b: number) => [number, number, number, number];
     readonly shield_t2z: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];

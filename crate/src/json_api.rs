@@ -252,6 +252,31 @@ fn dfvk_from_json(j: &Value) -> Result<DiversifiableFullViewingKey, String> {
     }
 }
 
+/// Derive a Sapling account from a BIP-39 seed (ZIP-32 `m/32'/coin_type'/account'`).
+///
+/// Spec: `{ seed_hex, coin_type?: 133, account?: 0 }` — the JS side does the
+/// BIP-39 mnemonic -> 64-byte seed step (PBKDF2-HMAC-SHA512) and passes the seed
+/// hex here. Returns `{ extsk_hex, dfvk_hex, address_hex, diversifier_index_hex }`;
+/// `address_hex` is the raw 43-byte payment address the TS layer bech32-encodes
+/// into a `zs…` address.
+///
+/// No proving, no params — cheap, and offline like everything else here.
+pub fn derive_account_from_json(spec: &str) -> Result<String, String> {
+    let j: Value = serde_json::from_str(spec).map_err(|e| format!("json: {e}"))?;
+    let seed = h(&j["seed_hex"], "seed_hex")?;
+    let coin_type = u32f_or(&j["coin_type"], "coin_type", crate::derive::COIN_TYPE_MAINNET)?;
+    let account = u32f_or(&j["account"], "account", 0)?;
+
+    let acct = crate::derive::derive_account(&seed, coin_type, account)?;
+    serde_json::to_string(&json!({
+        "extsk_hex": hex::encode(acct.extsk),
+        "dfvk_hex": hex::encode(acct.dfvk),
+        "address_hex": hex::encode(acct.address),
+        "diversifier_index_hex": hex::encode(acct.diversifier_index),
+    }))
+    .map_err(|e| format!("serialize: {e}"))
+}
+
 /// Fully decrypt one incoming output (value + recipient + memo).
 /// Spec: { extsk_hex | dfvk_hex, out:{cv,cmu,epk,enc,ct,proof} } (raw wire hex).
 /// Returns { value, recipient_hex, memo_hex, memo_text } or null if not ours.

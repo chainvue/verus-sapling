@@ -3,9 +3,16 @@
 # Notes:
 # - This is the PR gate. release.yml runs the same TS gate on push to main
 #   (before publishing); the overlap on main is intentional and cheap.
-# - No lint step: this package has no eslint config (unlike verus-sdk); the
-#   runnable gate is tsc build -> tsc --noEmit -> vitest, plus the Rust crate's
-#   `cargo test` (its own job).
+# - No lint step, and currently no way to add the verus-sdk one. That repo uses
+#   typescript-eslint, which peer-caps at `typescript <6.1.0` and reads the
+#   legacy compiler API; this package is on TypeScript 7 (the native port),
+#   whose package exposes neither `createProgram` nor `createSourceFile`. So a
+#   typed eslint setup is not merely un-installed here, it is un-installable
+#   until typescript-eslint ships TS-7 support. A `lint` script that always
+#   fails was removed rather than left to rot. Revisit when that support lands
+#   (or adopt a linter that does not depend on the TS compiler API).
+#   The runnable gate is tsc build -> tsc --noEmit -> vitest, plus the Rust
+#   crate's `cargo test` (its own job).
 # - Node matrix: runtime floor is Node 18 (engines), but the test toolchain and
 #   OIDC publishing want newer; 20/22/24 are exercised here.
 name: CI
@@ -54,9 +61,11 @@ jobs:
 
       # SHA-pinned (tag-hijack defense). dtolnay/rust-toolchain selects the
       # toolchain from the ref name, so a SHA pin needs an explicit `toolchain`.
+      # The version MUST match crate/rust-toolchain.toml — it is the toolchain
+      # that built the committed crate/pkg.
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
-          toolchain: stable
+          toolchain: '1.95.0'
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
@@ -68,27 +77,35 @@ jobs:
         run: cargo test
 
   # The published WASM prover (crate/pkg) is committed. Compiling it from source
-  # is a HARD gate (catches source that no longer builds for wasm32). Byte-for-byte
-  # reproduction is NOT yet guaranteed — rustc codegen + wasm-opt differ across
-  # toolchains — so binary drift is reported as a WARNING, not a failure. Making it
-  # a hard gate requires a pinned, reproducible build (a documented follow-up).
+  # is a HARD gate (catches source that no longer builds for wasm32). Both inputs
+  # that decide the output bytes are now pinned — rustc (1.95.0, matching
+  # crate/rust-toolchain.toml) and wasm-pack/wasm-opt (0.14.0) — so drift should
+  # no longer be routine. It is still reported as a WARNING rather than a failure
+  # until a few runs confirm the pins are SUFFICIENT (a rustup build and the
+  # Homebrew build that produced the committed pkg may still differ); promoting
+  # it to a hard gate is then a one-line change.
   wasm-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Same pin as the `crate` job and crate/rust-toolchain.toml.
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
-          toolchain: stable
+          toolchain: '1.95.0'
           targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           workspaces: crate
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # Pinned, not `| sh` from the installer: that script always fetches the
+      # LATEST wasm-pack, and wasm-pack bundles the wasm-opt that rewrites the
+      # binary — so an upstream release would silently change the output bytes.
+      # 0.14.0 built the committed crate/pkg. Cached by rust-cache above.
+      - name: Install wasm-pack (pinned)
+        run: cargo install wasm-pack --version 0.14.0 --locked
 
       - name: Rebuild WASM (compile = hard gate) and report any binary drift
         run: |
