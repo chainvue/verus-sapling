@@ -6,6 +6,13 @@
 # + CHANGELOG.md, publishes to npm, tags, and creates the GitHub release. No
 # releasable commits -> no-op. Preview with the workflow_dispatch dry-run.
 #
+# Artifact: the wasm prover is REBUILT here from the tagged source with the
+# pinned toolchain, and the result is what gets published and committed back by
+# the release commit (see the `crate/pkg` entry in .releaserc.json assets). The
+# copy committed in git is a developer convenience — it keeps the TS-only build,
+# typecheck and test path working without a Rust toolchain — but it is never
+# what reaches npm on its own.
+#
 # Publish: semantic-release owns versioning only (@semantic-release/npm runs
 # npmPublish:false, so no NPM token is verified); the actual publish is
 # `npm publish` (exec plugin) using npm OIDC trusted publishing — no NPM_TOKEN,
@@ -67,6 +74,33 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Build the prover from source rather than trusting the committed
+      # crate/pkg. v0.1.0 shipped a binary that did not rebuild from the tag it
+      # was published under: a stale artifact reached npm because committing it
+      # is a human step, and the human step was missed. Building here makes the
+      # PUBLISHED artifact a function of the tagged source and the pinned
+      # toolchain, so that failure cannot recur regardless of what is in git.
+      # The versions must match crate/rust-toolchain.toml and ci.yml.
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          toolchain: '1.95.0'
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: crate
+
+      - name: Install wasm-pack (pinned)
+        run: cargo install wasm-pack --version 0.14.0 --locked
+
+      # wasm-pack writes a crate/pkg/.gitignore containing `*`; npm honors it and
+      # would drop the entire wasm from the tarball (see CONTRIBUTING).
+      - name: Build the wasm prover from source
+        run: |
+          wasm-pack build crate --target web --release
+          rm -f crate/pkg/.gitignore
+
+      # Runs against the just-built wasm, not the committed one.
       - name: Build
         run: npm run build
 
