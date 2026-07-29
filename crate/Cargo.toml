@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 # re-enabled only for non-wasm targets below.
 sapling-crypto = { version = "0.7", default-features = false, features = ["circuit"] }
 rand = "0.8"
-rand_core = "0.6"
+rand_core = "0.9"
 # ZIP-32 child-index type, for the account derivation in `derive.rs`. Already in
 # the tree — sapling-crypto depends on it and its zip32 API takes these types;
 # this only makes the edge explicit so `ChildIndex` can be named. Version tracks
