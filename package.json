@@ -79,7 +79,7 @@
     "esbuild": "^0.28.1",
     "semantic-release": "^25.0.7",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   },
   "//": "The concrete lightwalletd gRPC client (@chainvue/verus-sapling/lightwalletd) needs @grpc/grpc-js — an OPTIONAL dependency: the browser path implements LightwalletdTransport over gRPC-web instead, and the package root pulls in no gRPC at runtime.",
   "publishConfig": {
