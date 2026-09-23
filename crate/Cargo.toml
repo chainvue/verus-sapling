@@ -42,6 +42,6 @@ serde_json = "1"
 # For the golden-vector sighash/binding-sig verification example.
 bellman = "0.14"
 bls12_381 = "0.8"
-jubjub = "0.10"
+jubjub = "0.11"
 redjubjub = "0.8"
 group = "0.13"
