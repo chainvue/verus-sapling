@@ -41,7 +41,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # For the golden-vector sighash/binding-sig verification example.
 bellman = "0.14"
-bls12_381 = "0.8"
+bls12_381 = "0.9"
 jubjub = "0.10"
 redjubjub = "0.8"
 group = "0.13"
