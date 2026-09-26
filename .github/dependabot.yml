@@ -14,6 +14,43 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      # sapling-crypto expresses its public API in bls12_381/jubjub/group types,
+      # so a version skew between them is a type error rather than a warning.
+      # Rust has no peer-dependency mechanism to catch it, so the coupling has
+      # to be written down here. Mirrors chainvue/verus-rust-sdk's config.
+      zcash-sapling:
+        patterns:
+          - sapling-crypto
+          - zcash_note_encryption
+          - zip32
+          - bellman
+          - bls12_381
+          - jubjub
+          - group
+          - redjubjub
+    ignore:
+      # These majors exist upstream but nothing can consume them yet:
+      # sapling-crypto 0.7.0, the latest release, still requires
+      # jubjub ^0.10, bls12_381 ^0.8, group ^0.13 and
+      # zcash_note_encryption ^0.4. Bumping any of them alone does not merely
+      # fail to resolve -- it compiles against a changed API and stops, e.g.
+      # `error[E0599]: no function or associated item named 'from_bytes' found
+      # for struct 'ExtendedPoint'` from jubjub 0.11. See #21, #22 and #23,
+      # closed for exactly this.
+      #
+      # Grouping alone cannot fix it: a group of three crates that do not
+      # compile together is still a red pull request. Remove these entries when
+      # sapling-crypto ships a release that moves -- the group above will then
+      # carry the whole family in one pull request.
+      - dependency-name: jubjub
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: bls12_381
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: zcash_note_encryption
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: group
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: "/"
