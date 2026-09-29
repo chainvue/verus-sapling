@@ -51,6 +51,17 @@ updates:
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: group
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # Same pin, dev-deps side: sapling-crypto 0.7 requires redjubjub ^0.8,
+      # bellman ^0.14 and rand_core ^0.6, and redjubjub 0.9 / bellman 0.15
+      # already need rand_core 0.10.
+      - dependency-name: redjubjub
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: bellman
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: rand
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: rand_core
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: "/"
